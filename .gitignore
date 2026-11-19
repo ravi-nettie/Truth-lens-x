@@ -1,39 +1,85 @@
+# ==============================================================================
+# TruthLens X — Production Git Ignore Policy
+# ==============================================================================
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyd
 
-# Environments
+# Python Virtual Environments
 .venv/
 venv/
 ENV/
 env/
+env.bak/
+venv.bak/
 
-# Data and Artifacts (Rule 3)
-data/
-!data/.gitkeep
-models/
-!models/.gitkeep
+# Environment Variables & Local Secrets (Strict Exclusions)
+.env
+.env.*
+!.env.example
+!*.env.example
 
-# Node / Frontend
+# Node / Frontend Build Outputs
 node_modules/
 frontend/dist/
 frontend/.next/
 frontend/build/
+.pnpm-store/
 
 # Testing & Coverage
 .pytest_cache/
 .coverage
 htmlcov/
+.tox/
+.nox/
 
-# Logs & OS artifacts
+# SQLite Databases & WAL Journal Files
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite3
+truth_lens.db
+data/*.db
+data/*.sqlite*
+
+# Uploaded Evidence & Derived Forensic Artifacts (Rule 3 Immutability)
+data/evidence/*
+!data/evidence/.gitkeep
+data/artifacts/*
+!data/artifacts/.gitkeep
+data/tmp/*
+!data/tmp/.gitkeep
+
+# Dataset Files & Model Weights
+models/*
+!models/.gitkeep
+*.pt
+*.bin
+*.onnx
+*.safetensors
+samples/evaluation/small_media/
+samples/evaluation/medium_media/
+samples/evaluation/large_media/
+
+# Evaluation Intermediate Artifacts
+evaluation_reports/**/artifacts/
+
+# Logs, Temporary Files, OS & IDE Caches
 *.log
+*.pid
+tmp/
+temp/
+scratch/
+temp_yaml/
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
 *.swp
-
-# Evaluation intermediate artifacts
-evaluation_reports/**/artifacts/
-
+*.swo
+.antigravity/
