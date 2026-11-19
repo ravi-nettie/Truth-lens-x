@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect } from "react";
-import { AlertCircle, Volume2, Clock } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { AlertCircle, Volume2 } from "lucide-react";
 
 export interface WaveformBucket {
   min: number;
@@ -87,19 +87,19 @@ export const Waveform: React.FC<WaveformProps> = ({
   return (
     <div className={`space-y-2 select-none ${className}`}>
       {/* Time & Cursor Info Header */}
-      <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+      <div className="flex items-center justify-between text-[11px] font-mono text-on-surface-variant">
         <div className="flex items-center gap-2">
-          <Volume2 className="h-3.5 w-3.5 text-indigo-400" />
-          <span className="font-semibold text-slate-200">Interactive Waveform Envelope</span>
-          <span className="text-slate-500">| Click to Seek</span>
+          <Volume2 className="h-3.5 w-3.5 text-primary" />
+          <span className="font-semibold text-on-surface">Interactive Waveform Envelope</span>
+          <span className="text-on-surface-variant/70">| Click to Seek</span>
         </div>
         <div className="flex items-center gap-3">
           {hoverMs !== null && (
-            <span className="text-indigo-400 bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-800/60">
+            <span className="text-primary bg-[#EFF6FF] px-2 py-0.5 rounded border border-blue-200">
               Hover: {formatTime(hoverMs)}
             </span>
           )}
-          <span className="text-slate-300 font-semibold">
+          <span className="text-on-surface font-semibold">
             {formatTime(currentTimeMs)} / {formatTime(effectiveDuration)}
           </span>
         </div>
@@ -112,10 +112,10 @@ export const Waveform: React.FC<WaveformProps> = ({
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
         style={{ height: `${height}px` }}
-        className="relative w-full rounded-xl border border-slate-800 bg-slate-950 p-1 cursor-pointer overflow-hidden group shadow-inner"
+        className="relative w-full rounded border border-outline-variant bg-surface-container-low p-1 cursor-pointer overflow-hidden group shadow-sm"
       >
         {/* Center line */}
-        <div className="absolute left-0 right-0 top-1/2 h-[1px] bg-slate-800 pointer-events-none" />
+        <div className="absolute left-0 right-0 top-1/2 h-[1px] bg-outline-variant pointer-events-none" />
 
         {/* SVG Waveform Bars */}
         <svg
@@ -124,15 +124,15 @@ export const Waveform: React.FC<WaveformProps> = ({
           className="w-full h-full pointer-events-none"
         >
           <defs>
-            <linearGradient id="waveGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#818cf8" stopOpacity="0.8" />
-              <stop offset="50%" stopColor="#4f46e5" stopOpacity="0.9" />
-              <stop offset="100%" stopColor="#818cf8" stopOpacity="0.8" />
+            <linearGradient id="waveGradientStitch" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#94A3B8" stopOpacity="0.7" />
+              <stop offset="50%" stopColor="#64748B" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#94A3B8" stopOpacity="0.7" />
             </linearGradient>
-            <linearGradient id="wavePlayedGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.95" />
-              <stop offset="50%" stopColor="#0284c7" stopOpacity="1" />
-              <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.95" />
+            <linearGradient id="wavePlayedGradientStitch" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.9" />
+              <stop offset="50%" stopColor="#2563EB" stopOpacity="1" />
+              <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.9" />
             </linearGradient>
           </defs>
 
@@ -153,7 +153,7 @@ export const Waveform: React.FC<WaveformProps> = ({
                 width={0.8}
                 height={barHeight}
                 rx={0.3}
-                fill={isPlayed ? "url(#wavePlayedGradient)" : "url(#waveGradient)"}
+                fill={isPlayed ? "url(#wavePlayedGradientStitch)" : "url(#waveGradientStitch)"}
               />
             );
           })}
@@ -181,15 +181,15 @@ export const Waveform: React.FC<WaveformProps> = ({
               {/* Marker line */}
               <div
                 className={`h-full w-full ${
-                  isModerateOrStrong ? "bg-amber-400 animate-pulse shadow-glow" : "bg-sky-400"
+                  isModerateOrStrong ? "bg-[#D97706]" : "bg-primary"
                 }`}
               />
               {/* Top Pin Badge */}
               <div
-                className={`absolute -top-1 -left-2.5 flex items-center justify-center h-5 w-5 rounded-full border shadow-md transition-transform group-hover/marker:scale-125 ${
+                className={`absolute -top-1 -left-2.5 flex items-center justify-center h-5 w-5 rounded-full border shadow-sm transition-transform group-hover/marker:scale-125 ${
                   isModerateOrStrong
-                    ? "bg-amber-500 text-slate-950 border-amber-300"
-                    : "bg-sky-500 text-slate-950 border-sky-300"
+                    ? "bg-[#FFF5E6] text-[#D97706] border-amber-300"
+                    : "bg-[#EFF6FF] text-primary border-blue-300"
                 }`}
               >
                 <AlertCircle className="h-3 w-3 stroke-[2.5]" />
@@ -201,16 +201,16 @@ export const Waveform: React.FC<WaveformProps> = ({
         {/* Playhead Scrub Line */}
         <div
           style={{ left: `${playheadRatio * 100}%` }}
-          className="absolute top-0 bottom-0 w-[2px] bg-white z-30 pointer-events-none shadow-md shadow-white/50"
+          className="absolute top-0 bottom-0 w-[2px] bg-primary z-30 pointer-events-none shadow-sm"
         >
-          <div className="absolute -top-1 -left-1.5 h-3 w-3 rounded-full bg-white ring-2 ring-indigo-500" />
+          <div className="absolute -top-1 -left-1.5 h-3 w-3 rounded-full bg-primary ring-2 ring-blue-200" />
         </div>
 
         {/* Hover Scrub Line */}
         {hoverX !== null && (
           <div
             style={{ left: `${hoverX}px` }}
-            className="absolute top-0 bottom-0 w-[1px] bg-indigo-400/60 border-l border-dashed border-indigo-400 z-10 pointer-events-none"
+            className="absolute top-0 bottom-0 w-[1px] bg-primary/60 border-l border-dashed border-primary z-10 pointer-events-none"
           />
         )}
       </div>
@@ -218,7 +218,7 @@ export const Waveform: React.FC<WaveformProps> = ({
       {/* Discontinuity Marker Legend Bar */}
       {discontinuities.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
-          <span className="font-semibold text-slate-400 text-[10px] uppercase font-mono">
+          <span className="font-semibold text-on-surface-variant text-[10px] uppercase font-mono">
             Discontinuities:
           </span>
           {discontinuities.map((d, i) => (
@@ -226,11 +226,11 @@ export const Waveform: React.FC<WaveformProps> = ({
               key={d.id || i}
               type="button"
               onClick={() => onSeek(d.time_start_ms)}
-              className="inline-flex items-center gap-1 rounded bg-amber-950/60 border border-amber-800/70 px-2 py-0.5 text-[10px] font-mono font-medium text-amber-300 hover:bg-amber-900/60 transition-colors"
+              className="inline-flex items-center gap-1 rounded bg-[#FFF5E6] border border-amber-200 px-2 py-0.5 text-[10px] font-mono font-medium text-[#D97706] hover:bg-amber-100 transition-colors shadow-sm"
             >
-              <AlertCircle className="h-3 w-3 text-amber-400" />
+              <AlertCircle className="h-3 w-3 text-[#D97706]" />
               <span>{formatTime(d.time_start_ms)}</span>
-              <span className="text-amber-500/80 capitalize">({d.evidence_strength || "anomaly"})</span>
+              <span className="text-[#D97706]/80 capitalize">({d.evidence_strength || "anomaly"})</span>
             </button>
           ))}
         </div>

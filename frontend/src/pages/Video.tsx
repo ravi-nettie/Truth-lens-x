@@ -12,6 +12,8 @@ import {
   Sparkles,
   Info,
   RotateCw,
+  Cpu,
+  CheckCircle2,
 } from "lucide-react";
 import {
   api,
@@ -19,6 +21,7 @@ import {
   SchemaEvidenceResponse,
   SchemaObservation,
 } from "../api/client";
+import { CaseHeaderTabs } from "../components/CaseHeaderTabs";
 import { ObservationCard } from "../components/ObservationCard";
 import { NotAnalyzedCard } from "../components/NotAnalyzedCard";
 import { EvidenceViewer } from "../components/EvidenceViewer";
@@ -107,7 +110,6 @@ export const Video: React.FC = () => {
     .filter((o) => o.time_start_ms !== null && o.time_start_ms !== undefined)
     .map((o) => {
       const ms = o.time_start_ms!;
-      // Find how many indicators coincide at this timestamp (+/- 100ms)
       const coFlagged = observations.filter(
         (other) =>
           other.time_start_ms !== null &&
@@ -127,7 +129,6 @@ export const Video: React.FC = () => {
       };
     });
 
-  // If no frame items directly from observations, provide default candidate cuts
   if (frameItems.length === 0 && sceneCutObs.length > 0) {
     sceneCutObs.forEach((sc) => {
       frameItems.push({
@@ -146,36 +147,29 @@ export const Video: React.FC = () => {
   const videoUrl = selectedEvidence ? `/api/evidence/${selectedEvidence.id}/file` : "";
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Top Breadcrumb */}
-      <div className="flex items-center justify-between">
-        <Link
-          to={`/cases/${caseId}`}
-          className="text-xs text-slate-400 hover:text-white flex items-center gap-1 font-medium transition-colors"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to Case Dashboard
-        </Link>
-      </div>
+    <div className="p-6 lg:p-8 max-w-[1520px] mx-auto w-full flex flex-col gap-6">
+      {/* Stitch Case Navigation Tabs */}
+      {caseDetail && <CaseHeaderTabs caseData={caseDetail.case} caseId={caseId || ""} />}
 
       {/* Screen Title & Evidence Selector */}
-      <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-3">
-        <div className="flex items-center gap-2">
-          <VideoIcon className="h-5 w-5 text-indigo-400" />
-          <h1 className="text-xl font-bold text-white">
+      <div className="flex flex-wrap items-center justify-between border-b border-slate-200 pb-3 gap-3">
+        <div className="flex items-center gap-2.5">
+          <VideoIcon className="h-5 w-5 text-sky-600" />
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
             Video Forensic Inspection (Module 13B)
-          </h1>
+          </h2>
         </div>
 
         {videoEvidenceList.length > 1 && (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400">Select Video:</span>
+            <span className="text-xs font-semibold text-slate-600">Select Video:</span>
             <select
               value={selectedEvidence?.id || ""}
               onChange={(e) => {
                 const ev = videoEvidenceList.find((item) => item.id === e.target.value);
                 if (ev) setSelectedEvidence(ev);
               }}
-              className="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-lg px-2.5 py-1 focus:outline-none"
+              className="bg-white border border-slate-300 text-slate-900 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {videoEvidenceList.map((ev) => (
                 <option key={ev.id} value={ev.id}>
@@ -188,29 +182,29 @@ export const Video: React.FC = () => {
       </div>
 
       {/* Forensic Notice: Hard Cuts are Informational */}
-      <div className="rounded-xl border border-sky-900/50 bg-sky-950/20 p-4 space-y-1.5 text-xs">
-        <div className="flex items-center gap-2 text-sky-400 font-bold uppercase tracking-wider text-[11px]">
-          <Info className="h-4 w-4 shrink-0" />
+      <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4 space-y-1.5 text-xs">
+        <div className="flex items-center gap-2 text-blue-900 font-bold uppercase tracking-wider text-[11px]">
+          <Info className="h-4 w-4 shrink-0 text-blue-600" />
           <span>Forensic Methodology: Video Cuts & Camera Shifts</span>
         </div>
-        <p className="text-sky-200/90 leading-relaxed">
-          An ordinary hard video cut, scene transition, or presentation timestamp (PTS) step is standard in routine camera editing and smartphone pause-and-resume. Hard cuts alone are classified as <strong className="text-white">informational</strong> and do NOT constitute suspicious manipulation unless corroborated by cross-modal audio discontinuity or contradictory factual claims.
+        <p className="text-blue-800 leading-relaxed">
+          An ordinary hard video cut, scene transition, or presentation timestamp (PTS) step is standard in routine camera editing and smartphone pause-and-resume. Hard cuts alone are classified as <strong className="text-blue-950 font-semibold">informational</strong> and do NOT constitute suspicious manipulation unless corroborated by cross-modal audio discontinuity or contradictory factual claims.
         </p>
       </div>
 
       {errorMsg && (
-        <div className="rounded-lg border border-rose-800 bg-rose-950/40 p-3 text-xs text-rose-300">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700">
           {errorMsg}
         </div>
       )}
 
       {loading ? (
-        <div className="text-xs text-slate-400 font-mono py-16 text-center">
+        <div className="text-xs text-slate-500 font-mono py-16 text-center">
           Loading video forensic observations...
         </div>
       ) : !selectedEvidence ? (
-        <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/30 p-16 text-center text-xs text-slate-500">
-          <Film className="h-8 w-8 text-slate-600 mx-auto mb-2" />
+        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-16 text-center text-xs text-slate-500">
+          <Film className="h-8 w-8 text-slate-400 mx-auto mb-2" />
           No video evidence items registered in this case.
         </div>
       ) : (
@@ -218,16 +212,16 @@ export const Video: React.FC = () => {
           {/* Video Preview & FFprobe Metadata Card */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* HTML5 Video Player */}
-            <div className="lg:col-span-7 rounded-xl border border-slate-800 bg-slate-900/80 p-4 space-y-3">
-              <div className="flex items-center justify-between text-xs font-mono text-slate-400 pb-2 border-b border-slate-800">
-                <span className="truncate max-w-[260px] font-bold text-white">
+            <div className="lg:col-span-7 rounded-xl border border-slate-200 bg-white shadow-sm p-5 space-y-3">
+              <div className="flex items-center justify-between text-xs font-mono text-slate-500 pb-2 border-b border-slate-100">
+                <span className="truncate max-w-[280px] font-bold text-slate-900">
                   {selectedEvidence.filename}
                 </span>
-                <span className="text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/60 text-[10px]">
-                  Mode 0444
+                <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[10px] font-semibold">
+                  Mode 0444 Sealed
                 </span>
               </div>
-              <div className="rounded-lg bg-black overflow-hidden flex items-center justify-center">
+              <div className="rounded-lg bg-black overflow-hidden flex items-center justify-center shadow-inner">
                 <video
                   ref={videoRef}
                   src={videoUrl}
@@ -238,26 +232,26 @@ export const Video: React.FC = () => {
             </div>
 
             {/* ffprobe Container Metadata Panel */}
-            <div className="lg:col-span-5 rounded-xl border border-slate-800 bg-slate-900/80 p-5 space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-                <Film className="h-4 w-4 text-indigo-400" />
-                <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+            <div className="lg:col-span-5 rounded-xl border border-slate-200 bg-white shadow-sm p-5 space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                <Film className="h-4 w-4 text-sky-600" />
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                   Container & Stream Metadata (ffprobe)
                 </h3>
               </div>
 
-              <div className="divide-y divide-slate-800/80 text-xs font-mono space-y-2 pt-1">
+              <div className="divide-y divide-slate-100 text-xs font-mono space-y-2 pt-1">
                 <div className="flex justify-between py-1">
                   <span className="text-slate-500">Duration:</span>
-                  <span className="text-slate-200 font-semibold">{durationFormatted}</span>
+                  <span className="text-slate-900 font-semibold">{durationFormatted}</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-500">Video Codec:</span>
-                  <span className="text-slate-200">{ffprobeMeta.codec || ffprobeMeta.codec_name || "h264 / mp4"}</span>
+                  <span className="text-slate-900">{ffprobeMeta.codec || ffprobeMeta.codec_name || "h264 / mp4"}</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-500">Resolution:</span>
-                  <span className="text-slate-200">
+                  <span className="text-slate-900">
                     {ffprobeMeta.width && ffprobeMeta.height
                       ? `${ffprobeMeta.width} × ${ffprobeMeta.height} px`
                       : "1920 × 1080 px"}
@@ -265,75 +259,75 @@ export const Video: React.FC = () => {
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-500">Framerate:</span>
-                  <span className="text-slate-200">
+                  <span className="text-slate-900">
                     {ffprobeMeta.fps ? `${ffprobeMeta.fps} fps` : "30.0 fps (CFR)"}
                   </span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-500">Frame Rate Mode:</span>
-                  <span className="text-slate-200">
+                  <span className="text-slate-900">
                     {ffprobeMeta.is_vfr ? (
-                      <span className="text-amber-400">Variable (VFR Detected)</span>
+                      <span className="text-amber-600 font-semibold">Variable (VFR Detected)</span>
                     ) : (
-                      <span className="text-emerald-400">Constant (CFR)</span>
+                      <span className="text-emerald-600 font-semibold">Constant (CFR)</span>
                     )}
                   </span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-500">Pixel Format:</span>
-                  <span className="text-slate-200">{ffprobeMeta.pix_fmt || "yuv420p"}</span>
+                  <span className="text-slate-900">{ffprobeMeta.pix_fmt || "yuv420p"}</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-500">Creation Date:</span>
-                  <span className="text-slate-200">{ffprobeMeta.creation_time || "Not Embedded"}</span>
+                  <span className="text-slate-900">{ffprobeMeta.creation_time || "Not Embedded"}</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* PTS Gap & VFR Indicators */}
-          <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5 space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-6 space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-indigo-400" />
-                <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                <Clock className="h-4 w-4 text-sky-600" />
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                   PTS Timestamp Continuity & Frame Rate Integrity
                 </h3>
               </div>
-              <span className="text-[10px] font-mono text-slate-400">
+              <span className="text-[11px] font-mono text-slate-500">
                 Safe Subprocess ffprobe validation
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs font-mono">
-              <div className="rounded-lg border border-slate-800 bg-slate-950 p-3 space-y-1">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5 space-y-1">
                 <span className="text-[10px] text-slate-500 uppercase block font-semibold">
                   PTS Delta Maximum
                 </span>
-                <span className="text-white font-bold text-sm">33.3 ms</span>
-                <p className="text-[10px] text-slate-400 font-sans mt-1">
+                <span className="text-slate-900 font-bold text-sm">33.3 ms</span>
+                <p className="text-[11px] text-slate-500 font-sans mt-1">
                   Uniform inter-frame step. No abnormal dropped frames or buffer stalls detected.
                 </p>
               </div>
 
-              <div className="rounded-lg border border-slate-800 bg-slate-950 p-3 space-y-1">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5 space-y-1">
                 <span className="text-[10px] text-slate-500 uppercase block font-semibold">
                   Variable Frame Rate (VFR)
                 </span>
-                <span className="text-emerald-400 font-bold text-sm">
+                <span className="text-emerald-700 font-bold text-sm">
                   {ffprobeMeta.is_vfr ? "VFR Warning" : "CFR Consistent"}
                 </span>
-                <p className="text-[10px] text-slate-400 font-sans mt-1">
+                <p className="text-[11px] text-slate-500 font-sans mt-1">
                   Frame timestamps maintain standard linear cadence without variable skew.
                 </p>
               </div>
 
-              <div className="rounded-lg border border-slate-800 bg-slate-950 p-3 space-y-1">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5 space-y-1">
                 <span className="text-[10px] text-slate-500 uppercase block font-semibold">
                   Container Moov Atom
                 </span>
-                <span className="text-indigo-300 font-bold text-sm">Header Prioritized</span>
-                <p className="text-[10px] text-slate-400 font-sans mt-1">
+                <span className="text-blue-700 font-bold text-sm">Header Prioritized</span>
+                <p className="text-[11px] text-slate-500 font-sans mt-1">
                   Fast-start streaming atom intact. Consistent with camera direct encoding.
                 </p>
               </div>
@@ -341,15 +335,15 @@ export const Video: React.FC = () => {
           </div>
 
           {/* Scene-Cut List with Exact PTS */}
-          <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-6 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <Scissors className="h-4 w-4 text-indigo-400" />
-                <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                <Scissors className="h-4 w-4 text-sky-600" />
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                   Detected Scene Cuts & Camera Shifts ({sceneCutObs.length})
                 </h3>
               </div>
-              <span className="text-[10px] font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+              <span className="text-[11px] font-mono text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded border border-slate-200">
                 Ordinary cuts are informational
               </span>
             </div>
@@ -359,7 +353,7 @@ export const Video: React.FC = () => {
                 No hard camera transitions detected across video stream.
               </p>
             ) : (
-              <div className="divide-y divide-slate-800/80 space-y-2 pt-1">
+              <div className="divide-y divide-slate-100 space-y-2 pt-1">
                 {sceneCutObs.map((cut) => {
                   const cutMs = cut.time_start_ms || 7400;
                   const frameIdx = (cut.details as any)?.frame_index || 222;
@@ -371,13 +365,13 @@ export const Video: React.FC = () => {
                     >
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2 font-mono">
-                          <span className="font-bold text-white">PTS {formatPts(cutMs)}</span>
+                          <span className="font-bold text-slate-900">PTS {formatPts(cutMs)}</span>
                           <span className="text-slate-500">Frame #{frameIdx}</span>
-                          <span className="text-[10px] uppercase font-semibold text-slate-400 bg-slate-800 px-2 py-0.2 rounded border border-slate-700">
+                          <span className="text-[10px] uppercase font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                             Informational
                           </span>
                         </div>
-                        <p className="text-slate-400 text-[11px] max-w-xl">
+                        <p className="text-slate-600 text-xs max-w-xl">
                           {cut.summary || "Normal video scene cut detected via content HSV delta."}
                         </p>
                       </div>
@@ -385,9 +379,9 @@ export const Video: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => seekToMs(cutMs)}
-                        className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded-lg border border-slate-700 transition-colors"
+                        className="flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs px-3 py-1.5 rounded-lg border border-slate-200 shadow-xs transition-colors font-medium"
                       >
-                        <Play className="h-3 w-3 fill-white" />
+                        <Play className="h-3 w-3 fill-slate-700" />
                         <span>Seek Video</span>
                       </button>
                     </div>
@@ -398,7 +392,7 @@ export const Video: React.FC = () => {
           </div>
 
           {/* Sampled Frame Gallery Component */}
-          <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5 space-y-4">
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-6 space-y-4">
             <FrameGallery frames={frameItems} onSeek={seekToMs} />
           </div>
 
@@ -411,7 +405,7 @@ export const Video: React.FC = () => {
 
           {/* Video Observation Findings */}
           <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono">
               Video Forensic Findings ({observations.length})
             </h3>
 

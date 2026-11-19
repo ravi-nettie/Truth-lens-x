@@ -21,6 +21,8 @@ import {
   FileSpreadsheet,
   CheckSquare,
   AlertCircle,
+  TrendingUp,
+  Cpu,
 } from "lucide-react";
 import {
   api,
@@ -30,6 +32,7 @@ import {
   SchemaAnalysisStatusResponse,
 } from "../api/client";
 import { StatusBar } from "../components/StatusBar";
+import { CaseHeaderTabs } from "../components/CaseHeaderTabs";
 import { ObservationCard } from "../components/ObservationCard";
 import { EvidenceStrengthLegend } from "../components/EvidenceStrengthLegend";
 import { EvidenceViewer } from "../components/EvidenceViewer";
@@ -75,7 +78,7 @@ export const Dashboard: React.FC = () => {
       setObservations(obsRes || []);
       setCaseReviews(revRes.reviews || []);
 
-      if (cRes.case.status === "analyzing") {
+      if (cRes.case.status === "analyzing" || cRes.case.status === "running") {
         setIsAnalyzing(true);
       } else {
         setIsAnalyzing(false);
@@ -130,8 +133,8 @@ export const Dashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex h-96 items-center justify-center text-xs text-slate-400 font-mono">
-        <Loader2 className="h-5 w-5 animate-spin mr-2 text-indigo-500" />
+      <div className="flex h-96 items-center justify-center text-xs text-slate-500 font-mono">
+        <Loader2 className="h-5 w-5 animate-spin mr-2.5 text-blue-600" />
         Loading case dashboard...
       </div>
     );
@@ -140,11 +143,11 @@ export const Dashboard: React.FC = () => {
   if (!caseDetail) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <AlertTriangle className="h-10 w-10 text-rose-500 mx-auto mb-3" />
-        <h2 className="text-lg font-bold text-white">Case Not Found</h2>
-        <p className="text-xs text-slate-400 mt-1">{errorMsg || `Case ID "${caseId}" does not exist.`}</p>
-        <Link to="/" className="inline-block mt-4 text-xs font-semibold text-indigo-400 hover:underline">
-          Return to Overview
+        <AlertTriangle className="h-10 w-10 text-red-500 mx-auto mb-3" />
+        <h2 className="text-lg font-bold text-slate-900">Case Not Found</h2>
+        <p className="text-xs text-slate-500 mt-1">{errorMsg || `Case ID "${caseId}" does not exist.`}</p>
+        <Link to="/history" className="inline-block mt-4 text-xs font-semibold text-blue-600 hover:underline">
+          Return to Investigations Archive
         </Link>
       </div>
     );
@@ -161,16 +164,16 @@ export const Dashboard: React.FC = () => {
   const contradictionCount = caseDetail.contradiction_count || 0;
 
   let priorityLabel = "LOW REVIEW PRIORITY";
-  let priorityStyle = "bg-emerald-950/80 text-emerald-300 border-emerald-700/60";
+  let priorityStyle = "bg-emerald-50 text-emerald-800 border-emerald-200";
   let priorityReason = "No strong evidence anomalies or cross-modal contradictions detected.";
 
   if (strongCount >= 1 || contradictionCount >= 1) {
     priorityLabel = "HIGH REVIEW PRIORITY";
-    priorityStyle = "bg-rose-950/80 text-rose-300 border-rose-600/70";
+    priorityStyle = "bg-red-50 text-red-800 border-red-200";
     priorityReason = `${strongCount} strong anomaly finding(s) and ${contradictionCount} cross-modal contradiction(s) require human review.`;
   } else if (moderateCount >= 1) {
     priorityLabel = "MEDIUM REVIEW PRIORITY";
-    priorityStyle = "bg-amber-950/80 text-amber-300 border-amber-600/70";
+    priorityStyle = "bg-amber-50 text-amber-800 border-amber-200";
     priorityReason = `${moderateCount} moderate finding(s) warranting human scrutiny.`;
   }
 
@@ -187,56 +190,46 @@ export const Dashboard: React.FC = () => {
     observations.length > 0 ? Math.round((reviewedObsCount / observations.length) * 100) : 0;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* 1. Header & Priority Callout */}
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-2 mb-1.5">
-              <span className="font-mono text-xs text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-                {c.id}
-              </span>
-              <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${priorityStyle}`}>
-                {priorityLabel}
-              </span>
-              <span className="text-[10px] font-mono text-slate-500">
-                Created: {new Date(c.created_at).toLocaleDateString()}
-              </span>
-            </div>
-            <h1 className="text-2xl font-black text-white">{c.title}</h1>
-            {c.description && (
-              <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
-                {c.description}
-              </p>
-            )}
+    <div className="p-6 lg:p-8 max-w-[1520px] mx-auto w-full flex flex-col gap-6">
+      {/* 1. Stitch Case Header & Tabs */}
+      <CaseHeaderTabs caseData={c} caseId={c.id} />
+
+      {/* 2. Pipeline Controls & Priority Callout */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${priorityStyle}`}>
+              {priorityLabel}
+            </span>
+            <span className="text-xs text-slate-500 font-mono">
+              Registered: {new Date(c.created_at).toLocaleDateString()}
+            </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleTriggerAnalysis}
-              disabled={isAnalyzing}
-              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-2 rounded-lg text-xs shadow-sm transition-colors disabled:opacity-50"
-            >
-              {isAnalyzing ? (
-                <Loader2 className="h-4 w-4 animate-spin text-white" />
-              ) : (
-                <Play className="h-4 w-4 fill-white" />
-              )}
-              <span>{isAnalyzing ? "Analyzing Pipeline..." : "Re-Run Analysis"}</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleTriggerAnalysis}
+            disabled={isAnalyzing}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg text-xs shadow-sm transition-all disabled:opacity-50"
+          >
+            {isAnalyzing ? (
+              <Loader2 className="h-4 w-4 animate-spin text-white" />
+            ) : (
+              <Play className="h-4 w-4 fill-white" />
+            )}
+            <span>{isAnalyzing ? "Executing Pipeline..." : "Re-Run Analysis"}</span>
+          </button>
         </div>
 
         {/* Priority Formula Explainer */}
-        <div className="rounded-lg border border-slate-800 bg-slate-950 p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2">
-            <HelpCircle className="h-4 w-4 text-indigo-400 shrink-0" />
-            <span className="text-slate-300">
-              <strong className="text-white">Review Priority Formula:</strong> HIGH if (strong ≥ 1 OR contradictions ≥ 1) · MEDIUM if (moderate ≥ 1) · LOW otherwise.
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 text-slate-700">
+            <HelpCircle className="h-4 w-4 text-blue-600 shrink-0" />
+            <span>
+              <strong className="text-slate-900">Review Priority Rule:</strong> HIGH if (strong ≥ 1 OR contradictions ≥ 1) · MEDIUM if (moderate ≥ 1) · LOW otherwise.
             </span>
           </div>
-          <span className="text-slate-400 font-mono text-[11px] italic">
+          <span className="text-slate-500 font-mono text-[11px] italic">
             {priorityReason}
           </span>
         </div>
@@ -245,48 +238,49 @@ export const Dashboard: React.FC = () => {
         <StatusBar status={c.status || "created"} />
 
         {isAnalyzing && (
-          <div className="rounded-lg border border-indigo-800/60 bg-indigo-950/30 p-3 text-xs text-indigo-300 flex items-center justify-between animate-pulse">
-            <span className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin text-indigo-400" />
+          <div className="rounded-lg border border-blue-200 bg-blue-50/80 p-3 text-xs text-blue-900 flex items-center justify-between animate-pulse">
+            <span className="flex items-center gap-2 font-medium">
+              <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
               <span>Analyzing multimodal media on local CPU (polling every 1.5 s)...</span>
             </span>
-            <span className="font-mono text-[11px] text-slate-400">
+            <span className="font-mono text-[11px] text-blue-700">
               {statusInfo?.current_step || "Running pipeline analyzers..."}
             </span>
           </div>
         )}
-      </section>
+      </div>
 
-      {/* 2. Per-Analyzer Run Status Badges */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 font-mono">
-            <Layers className="h-4 w-4 text-indigo-400" />
-            <span>Per-Analyzer Execution Status</span>
-          </h3>
-          <span className="text-[10px] font-mono text-slate-500">
-            Rule-Based Pipeline (Pure Functions)
+      {/* 3. Per-Analyzer Run Status */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-3">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <Cpu className="h-4 w-4 text-blue-600" />
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono">
+              Per-Analyzer Execution Status
+            </h3>
+          </div>
+          <span className="text-[11px] font-mono text-slate-400">
+            Pure Rule-Based Forensic Pipeline
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
           {ANALYZER_CATALOG.map((analyzer) => {
-            // Check if there are observations matching this analyzer
             const matchingObs = observations.filter(
               (o) =>
                 o.method.toLowerCase().includes(analyzer.key) ||
                 o.indicator.toLowerCase().includes(analyzer.key)
             );
-            const isCompleted = matchingObs.length > 0 || c.status === "correlated" || c.status === "reported";
+            const isCompleted = matchingObs.length > 0 || c.status === "correlated" || c.status === "reported" || c.status === "completed";
             const isFailed = statusInfo?.errors?.some((e) => e.toLowerCase().includes(analyzer.key));
 
             return (
               <div
                 key={analyzer.key}
-                className="rounded-lg border border-slate-800 bg-slate-900/60 p-2.5 flex items-center justify-between"
+                className="rounded-lg border border-slate-200 bg-slate-50/70 p-2.5 flex items-center justify-between"
               >
-                <div>
-                  <span className="font-mono text-[11px] font-semibold text-slate-200 block truncate">
+                <div className="min-w-0 pr-1">
+                  <span className="font-mono text-xs font-semibold text-slate-800 block truncate">
                     {analyzer.name}
                   </span>
                   <span className="text-[10px] text-slate-500 uppercase font-mono">
@@ -294,14 +288,14 @@ export const Dashboard: React.FC = () => {
                   </span>
                 </div>
                 <span
-                  className={`flex h-2.5 w-2.5 rounded-full ${
+                  className={`flex h-2.5 w-2.5 rounded-full shrink-0 ${
                     isFailed
-                      ? "bg-rose-500 ring-2 ring-rose-500/30"
+                      ? "bg-red-500 ring-2 ring-red-200"
                       : isCompleted
-                      ? "bg-emerald-400 ring-2 ring-emerald-400/30"
+                      ? "bg-emerald-500 ring-2 ring-emerald-200"
                       : isAnalyzing
-                      ? "bg-indigo-400 animate-ping"
-                      : "bg-slate-600"
+                      ? "bg-blue-500 animate-ping"
+                      : "bg-slate-300"
                   }`}
                   title={isFailed ? "Failed" : isCompleted ? "Completed" : "Pending"}
                 />
@@ -309,40 +303,40 @@ export const Dashboard: React.FC = () => {
             );
           })}
         </div>
-      </section>
+      </div>
 
-      {/* 3. Summary Counts of Findings & Review Progress */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 4. Telemetry Metric Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Findings Card */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 space-y-1">
-          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-1.5">
+          <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider font-semibold">
             Total Indicators
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-white">{observations.length}</span>
-            <span className="text-xs text-slate-400">observations</span>
+            <span className="text-3xl font-bold text-slate-900">{observations.length}</span>
+            <span className="text-xs text-slate-500">observations</span>
           </div>
-          <div className="flex gap-2 text-[10px] font-mono pt-1 text-slate-400">
-            <span className="text-rose-400">{strongCount} strong</span>
+          <div className="flex gap-2 text-xs font-mono pt-1 text-slate-600">
+            <span className="text-red-600 font-semibold">{strongCount} strong</span>
             <span>·</span>
-            <span className="text-amber-400">{moderateCount} moderate</span>
+            <span className="text-amber-600 font-semibold">{moderateCount} mod</span>
             <span>·</span>
-            <span className="text-sky-400">{weakCount} weak</span>
+            <span className="text-blue-600 font-semibold">{weakCount} weak</span>
           </div>
         </div>
 
         {/* Contradictions Card */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 space-y-1">
-          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-1.5">
+          <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider font-semibold">
             Cross-Modal Contradictions
           </span>
           <div className="flex items-baseline gap-2">
-            <span className={`text-2xl font-black ${contradictionCount > 0 ? "text-amber-400" : "text-white"}`}>
+            <span className={`text-3xl font-bold ${contradictionCount > 0 ? "text-amber-600" : "text-slate-900"}`}>
               {contradictionCount}
             </span>
-            <span className="text-xs text-slate-400">conflict edges</span>
+            <span className="text-xs text-slate-500">conflict edges</span>
           </div>
-          <p className="text-[10px] text-slate-500 pt-1 leading-snug">
+          <p className="text-[11px] text-slate-500 pt-1 leading-snug">
             {contradictionCount > 0
               ? "Signals conflict across independent modalities."
               : "No conflicting cross-modal signals."}
@@ -350,138 +344,138 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Evidence Ingested Card */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 space-y-1">
-          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-1.5">
+          <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider font-semibold">
             Ingested Evidence Items
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-white">{evidenceItems.length}</span>
-            <span className="text-xs text-slate-400">files</span>
+            <span className="text-3xl font-bold text-slate-900">{evidenceItems.length}</span>
+            <span className="text-xs text-slate-500">sealed files</span>
           </div>
-          <span className="text-[10px] font-mono text-emerald-400 block pt-1">
+          <span className="text-[11px] font-mono text-emerald-700 font-semibold block pt-1">
             Mode 0444 · Read-Only Store
           </span>
         </div>
 
         {/* Human Review Progress Card */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 space-y-1.5">
-          <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-2">
+          <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 uppercase tracking-wider font-semibold">
             <span>Human Review Progress</span>
-            <span className="text-indigo-400 font-bold">{reviewProgressPct}%</span>
+            <span className="text-blue-600 font-bold">{reviewProgressPct}%</span>
           </div>
-          <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+          <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200">
             <div
               style={{ width: `${reviewProgressPct}%` }}
-              className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+              className="h-full bg-blue-600 rounded-full transition-all duration-500"
             />
           </div>
-          <span className="text-[10px] text-slate-400 block pt-0.5">
+          <span className="text-[11px] text-slate-500 block">
             {reviewedObsCount} of {observations.length} observations reviewed & audited
           </span>
         </div>
-      </section>
+      </div>
 
-      {/* 4. Quick Modality Links (Modules 13A - 15) */}
-      <section className="space-y-3">
-        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
-          Inspection Modules & Specialized Views
+      {/* 5. Quick Modality Links */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-3">
+        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono">
+          Specialized Inspection Workspaces
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
           <Link
             to={`/cases/${caseId}/image`}
-            className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 hover:border-indigo-500/50 hover:bg-slate-900 transition-all text-center space-y-1 group"
+            className="rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50/50 hover:border-blue-300 p-3 transition-all text-center space-y-1 group"
           >
-            <ImageIcon className="h-5 w-5 text-indigo-400 mx-auto group-hover:scale-110 transition-transform" />
-            <h4 className="text-xs font-bold text-white">Image (13A)</h4>
-            <span className="text-[10px] text-slate-400 font-mono block">
+            <ImageIcon className="h-5 w-5 text-blue-600 mx-auto group-hover:scale-105 transition-transform" />
+            <h4 className="text-xs font-bold text-slate-900">Image</h4>
+            <span className="text-[10px] text-slate-500 font-mono block">
               {imageObsCount} Findings
             </span>
           </Link>
 
           <Link
             to={`/cases/${caseId}/video`}
-            className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 hover:border-indigo-500/50 hover:bg-slate-900 transition-all text-center space-y-1 group"
+            className="rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50/50 hover:border-blue-300 p-3 transition-all text-center space-y-1 group"
           >
-            <Video className="h-5 w-5 text-sky-400 mx-auto group-hover:scale-110 transition-transform" />
-            <h4 className="text-xs font-bold text-white">Video (13B)</h4>
-            <span className="text-[10px] text-slate-400 font-mono block">
+            <Video className="h-5 w-5 text-sky-600 mx-auto group-hover:scale-105 transition-transform" />
+            <h4 className="text-xs font-bold text-slate-900">Video</h4>
+            <span className="text-[10px] text-slate-500 font-mono block">
               {videoObsCount} Findings
             </span>
           </Link>
 
           <Link
             to={`/cases/${caseId}/audio`}
-            className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 hover:border-indigo-500/50 hover:bg-slate-900 transition-all text-center space-y-1 group"
+            className="rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50/50 hover:border-blue-300 p-3 transition-all text-center space-y-1 group"
           >
-            <Music className="h-5 w-5 text-emerald-400 mx-auto group-hover:scale-110 transition-transform" />
-            <h4 className="text-xs font-bold text-white">Audio (13C)</h4>
-            <span className="text-[10px] text-slate-400 font-mono block">
+            <Music className="h-5 w-5 text-emerald-600 mx-auto group-hover:scale-105 transition-transform" />
+            <h4 className="text-xs font-bold text-slate-900">Audio</h4>
+            <span className="text-[10px] text-slate-500 font-mono block">
               {audioObsCount} Findings
             </span>
           </Link>
 
           <Link
             to={`/cases/${caseId}/text`}
-            className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 hover:border-indigo-500/50 hover:bg-slate-900 transition-all text-center space-y-1 group"
+            className="rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50/50 hover:border-blue-300 p-3 transition-all text-center space-y-1 group"
           >
-            <FileText className="h-5 w-5 text-amber-400 mx-auto group-hover:scale-110 transition-transform" />
-            <h4 className="text-xs font-bold text-white">Text (13D)</h4>
-            <span className="text-[10px] text-slate-400 font-mono block">
+            <FileText className="h-5 w-5 text-amber-600 mx-auto group-hover:scale-105 transition-transform" />
+            <h4 className="text-xs font-bold text-slate-900">Text</h4>
+            <span className="text-[10px] text-slate-500 font-mono block">
               {textObsCount} Findings
             </span>
           </Link>
 
           <Link
             to={`/cases/${caseId}/graph`}
-            className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 hover:border-indigo-500/50 hover:bg-slate-900 transition-all text-center space-y-1 group"
+            className="rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50/50 hover:border-blue-300 p-3 transition-all text-center space-y-1 group"
           >
-            <GitBranch className="h-5 w-5 text-indigo-400 mx-auto group-hover:scale-110 transition-transform" />
-            <h4 className="text-xs font-bold text-white">Graph (14A)</h4>
-            <span className="text-[10px] text-slate-400 font-mono block">
+            <GitBranch className="h-5 w-5 text-blue-600 mx-auto group-hover:scale-105 transition-transform" />
+            <h4 className="text-xs font-bold text-slate-900">Graph</h4>
+            <span className="text-[10px] text-slate-500 font-mono block">
               {contradictionCount} Conflicts
             </span>
           </Link>
 
           <Link
             to={`/cases/${caseId}/timeline`}
-            className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 hover:border-indigo-500/50 hover:bg-slate-900 transition-all text-center space-y-1 group"
+            className="rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50/50 hover:border-blue-300 p-3 transition-all text-center space-y-1 group"
           >
-            <Clock className="h-5 w-5 text-purple-400 mx-auto group-hover:scale-110 transition-transform" />
-            <h4 className="text-xs font-bold text-white">Timeline (14B)</h4>
-            <span className="text-[10px] text-slate-400 font-mono block">
-              Temporal Sync
+            <Clock className="h-5 w-5 text-purple-600 mx-auto group-hover:scale-105 transition-transform" />
+            <h4 className="text-xs font-bold text-slate-900">Timeline</h4>
+            <span className="text-[10px] text-slate-500 font-mono block">
+              Provenance
             </span>
           </Link>
 
           <Link
             to={`/cases/${caseId}/report`}
-            className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 hover:border-indigo-500/50 hover:bg-slate-900 transition-all text-center space-y-1 group"
+            className="rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50/50 hover:border-blue-300 p-3 transition-all text-center space-y-1 group"
           >
-            <FileSpreadsheet className="h-5 w-5 text-rose-400 mx-auto group-hover:scale-110 transition-transform" />
-            <h4 className="text-xs font-bold text-white">Report (15)</h4>
-            <span className="text-[10px] text-slate-400 font-mono block">
+            <FileSpreadsheet className="h-5 w-5 text-slate-700 mx-auto group-hover:scale-105 transition-transform" />
+            <h4 className="text-xs font-bold text-slate-900">Report</h4>
+            <span className="text-[10px] text-slate-500 font-mono block">
               Dossier & PDF
             </span>
           </Link>
         </div>
-      </section>
+      </div>
 
-      {/* 5. Evidence Inventory (EvidenceViewer) */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+      {/* 6. Evidence Inventory (EvidenceViewer) */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <FileCheck2 className="h-5 w-5 text-emerald-400" />
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+            <FileCheck2 className="h-5 w-5 text-emerald-600" />
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
               Evidence Inventory ({evidenceItems.length})
             </h3>
           </div>
-          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded">
-            All files hashed with SHA-256 upon ingestion
+          <span className="text-xs font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded font-medium">
+            SHA-256 Validated · Read-Only Store
           </span>
         </div>
 
         {evidenceItems.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/30 p-8 text-center text-xs text-slate-500">
+          <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-xs text-slate-500">
             No evidence files registered in this case yet.
           </div>
         ) : (
@@ -496,26 +490,26 @@ export const Dashboard: React.FC = () => {
             ))}
           </div>
         )}
-      </section>
+      </div>
 
-      {/* 6. Forensic Indicators & Human Review Section */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+      {/* 7. Forensic Indicators & Human Review Section */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-indigo-400" />
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+            <ShieldCheck className="h-5 w-5 text-blue-600" />
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
               Forensic Indicators & Human Review Controls ({observations.length})
             </h3>
           </div>
-          <span className="text-xs text-slate-400 font-mono">
-            {reviewedObsCount} Reviewed
+          <span className="text-xs text-slate-600 font-mono font-medium">
+            {reviewedObsCount} of {observations.length} Reviewed
           </span>
         </div>
 
         <EvidenceStrengthLegend />
 
         {observations.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/30 p-12 text-center text-xs text-slate-500">
+          <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-12 text-center text-xs text-slate-500">
             No forensic observations generated yet. Click "Re-Run Analysis" above to execute the pipeline.
           </div>
         ) : (
@@ -525,7 +519,7 @@ export const Dashboard: React.FC = () => {
             ))}
           </div>
         )}
-      </section>
+      </div>
     </div>
   );
 };

@@ -30,19 +30,19 @@ export const NotAnalyzedCard: React.FC<NotAnalyzedCardProps> = ({
 
   return (
     <div
-      className={`rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-xs text-slate-400 ${className}`}
+      className={`rounded border border-outline-variant/70 bg-surface-container-low p-4 text-xs text-on-surface-variant shadow-sm ${className}`}
     >
       <div className="flex items-center justify-between mb-2">
-        <span className="font-semibold text-slate-300 uppercase tracking-wider text-[11px] font-mono">
+        <span className="font-semibold text-on-surface uppercase tracking-wider text-[11px] font-mono">
           {analyzerName}
         </span>
         <span
           className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${
             isFailed
-              ? "bg-rose-950/60 text-rose-300 border border-rose-800/60"
+              ? "bg-[#FDEBEC] text-[#DC2626] border border-rose-200"
               : isSkipped
-              ? "bg-amber-950/60 text-amber-300 border border-amber-800/60"
-              : "bg-slate-800 text-slate-400 border border-slate-700"
+              ? "bg-[#FFF5E6] text-[#D97706] border border-amber-200"
+              : "bg-surface-container text-on-surface-variant border border-outline-variant"
           }`}
         >
           {isFailed ? (
@@ -56,11 +56,11 @@ export const NotAnalyzedCard: React.FC<NotAnalyzedCardProps> = ({
         </span>
       </div>
 
-      <div className="rounded border border-slate-800/80 bg-slate-950/70 p-2.5 font-mono text-[11px]">
-        <span className="font-semibold text-slate-300 block mb-0.5">
+      <div className="rounded border border-outline-variant bg-white p-2.5 font-mono text-[11px]">
+        <span className="font-semibold text-on-surface block mb-0.5">
           Not analyzed: {resolvedReason}
         </span>
-        <p className="text-slate-500 text-[10px] leading-relaxed">
+        <p className="text-on-surface-variant text-[10px] leading-relaxed">
           Forensic safety rule: Missing or failed analyzer runs are never silently omitted or hidden.
         </p>
       </div>

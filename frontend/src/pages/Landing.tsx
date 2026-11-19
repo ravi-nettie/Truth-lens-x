@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ShieldCheck,
-  PlusCircle,
-  FolderGit2,
+  Plus,
+  Folder,
   Cpu,
   Lock,
   Scale,
@@ -15,7 +15,6 @@ import {
   CheckSquare,
   FileSpreadsheet,
   AlertCircle,
-  HelpCircle,
 } from "lucide-react";
 import { api, SchemaCaseResponse } from "../api/client";
 
@@ -80,51 +79,51 @@ export const Landing: React.FC = () => {
   }, []);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-16">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-14 bg-white">
       {/* Hero Section */}
-      <section className="text-center space-y-5 max-w-3xl mx-auto pt-4">
-        <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-4 py-1.5 text-xs font-semibold text-indigo-400">
-          <ShieldCheck className="h-4 w-4" />
+      <section className="text-center space-y-4 max-w-3xl mx-auto pt-2">
+        <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-[#EFF6FF] px-3.5 py-1 text-xs font-semibold text-primary shadow-sm">
+          <ShieldCheck className="h-4 w-4 text-primary" />
           <span>Decision-Support Workbench · Not a Verdict Machine</span>
         </div>
 
-        <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-white leading-tight">
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-on-surface leading-tight">
           Deterministic Digital Media <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-sky-400 to-emerald-400">
-            Forensic Verification
+          <span className="text-primary">
+            Forensic Verification Workbench
           </span>
         </h1>
 
-        <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+        <p className="text-on-surface-variant text-sm sm:text-base leading-relaxed">
           TruthLens X rejects invented "deepfake percentage" scores. Built for investigative newsrooms, legal teams, and fact-checkers, it provides transparent signal extraction, cross-modal contradictions, mandatory alternative explanations, and a cryptographic audit trail.
         </p>
 
         {/* Quick CTA Actions */}
-        <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
           <Link
             to="/cases/new"
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-xl shadow-lg shadow-indigo-600/30 transition-all text-sm group"
+            className="flex items-center gap-2 bg-primary-container hover:bg-primary text-white font-semibold px-5 py-2.5 rounded shadow-sm transition-all text-xs sm:text-sm group"
           >
-            <PlusCircle className="h-4 w-4 group-hover:scale-110 transition-transform" />
-            <span>Create New Case</span>
+            <Plus className="h-4 w-4" />
+            <span>Create New Investigation</span>
           </Link>
           <Link
             to="/history"
-            className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-slate-200 font-semibold px-6 py-3 rounded-xl border border-slate-800 transition-all text-sm"
+            className="flex items-center gap-2 bg-white hover:bg-surface-container-low text-on-surface font-semibold px-5 py-2.5 rounded border border-outline-variant transition-all text-xs sm:text-sm shadow-sm"
           >
-            <FolderGit2 className="h-4 w-4 text-slate-400" />
-            <span>Open Case History</span>
+            <Folder className="h-4 w-4 text-on-surface-variant" />
+            <span>Open Case Directory</span>
           </Link>
         </div>
       </section>
 
       {/* 5-Stage Workflow Overview */}
-      <section className="space-y-6">
-        <div className="text-center space-y-1.5">
-          <h2 className="text-xl font-black text-white tracking-tight uppercase">
+      <section className="space-y-5">
+        <div className="text-center space-y-1">
+          <h2 className="text-lg font-bold text-on-surface tracking-tight uppercase">
             The 5-Stage Verification Workflow
           </h2>
-          <p className="text-xs text-slate-400 max-w-xl mx-auto">
+          <p className="text-xs text-on-surface-variant max-w-xl mx-auto">
             From raw media ingestion to reproducible audit reporting — an end-to-end disciplined methodology.
           </p>
         </div>
@@ -135,22 +134,22 @@ export const Landing: React.FC = () => {
             return (
               <div
                 key={stage.id}
-                className="relative rounded-xl border border-slate-800 bg-slate-900/60 p-4 flex flex-col justify-between space-y-3 hover:border-indigo-600/50 hover:bg-slate-900 transition-all group"
+                className="relative rounded border border-outline-variant bg-white p-4 flex flex-col justify-between space-y-3 hover:border-primary/50 hover:shadow-sm transition-all group"
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 font-mono text-xs font-bold">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#EFF6FF] text-primary border border-blue-200 font-mono text-xs font-bold">
                       {stage.step}
                     </span>
-                    <span className="text-[10px] font-mono font-semibold text-slate-400 uppercase bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                    <span className="text-[10px] font-mono font-semibold text-on-surface-variant uppercase bg-surface-container-low px-2 py-0.5 rounded border border-outline-variant">
                       {stage.badge}
                     </span>
                   </div>
-                  <h3 className="text-xs font-black text-white tracking-wider uppercase flex items-center gap-1.5 mb-1.5">
-                    <Icon className="h-3.5 w-3.5 text-indigo-400 group-hover:text-indigo-300" />
+                  <h3 className="text-xs font-bold text-on-surface tracking-wider uppercase flex items-center gap-1.5 mb-1.5">
+                    <Icon className="h-3.5 w-3.5 text-primary group-hover:text-blue-700" />
                     <span>{stage.title}</span>
                   </h3>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                  <p className="text-[11px] text-on-surface-variant leading-relaxed">
                     {stage.description}
                   </p>
                 </div>
@@ -161,33 +160,33 @@ export const Landing: React.FC = () => {
       </section>
 
       {/* Core Forensic Tenets */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 space-y-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <Cpu className="h-5 w-5" />
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="rounded border border-outline-variant bg-surface-container-low p-5 space-y-2 shadow-sm">
+          <div className="flex h-9 w-9 items-center justify-center rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <Cpu className="h-4 w-4" />
           </div>
-          <h3 className="text-sm font-bold text-white">100% Local-First & Offline</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
+          <h3 className="text-sm font-bold text-on-surface">100% Local-First & Offline</h3>
+          <p className="text-xs text-on-surface-variant leading-relaxed">
             Zero cloud uploads. Operates air-gapped on standard laptop CPUs without leaking sensitive whistleblower material or confidential source media.
           </p>
         </div>
 
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 space-y-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-            <Scale className="h-5 w-5" />
+        <div className="rounded border border-outline-variant bg-surface-container-low p-5 space-y-2 shadow-sm">
+          <div className="flex h-9 w-9 items-center justify-center rounded bg-[#EFF6FF] text-primary border border-blue-200">
+            <Scale className="h-4 w-4" />
           </div>
-          <h3 className="text-sm font-bold text-white">Forensic Honesty & Balance</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
+          <h3 className="text-sm font-bold text-on-surface">Forensic Honesty & Balance</h3>
+          <p className="text-xs text-on-surface-variant leading-relaxed">
             Every weak or moderate finding couples with explicit benign alternative explanations. Missing EXIF and ordinary video cuts are informational by default.
           </p>
         </div>
 
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 space-y-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20">
-            <Lock className="h-5 w-5" />
+        <div className="rounded border border-outline-variant bg-surface-container-low p-5 space-y-2 shadow-sm">
+          <div className="flex h-9 w-9 items-center justify-center rounded bg-[#EFF6FF] text-primary border border-blue-200">
+            <Lock className="h-4 w-4" />
           </div>
-          <h3 className="text-sm font-bold text-white">Immutable Store & Audit Chains</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
+          <h3 className="text-sm font-bold text-on-surface">Immutable Store & Audit Chains</h3>
+          <p className="text-xs text-on-surface-variant leading-relaxed">
             Evidence originals are locked read-only (mode 0444). Ingestion, reviewer decisions, and hash checks are cryptographically logged in append-only SQLite WAL storage.
           </p>
         </div>
@@ -195,44 +194,44 @@ export const Landing: React.FC = () => {
 
       {/* Recent Verification Cases */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="flex items-center justify-between border-b border-outline-variant pb-3">
           <div className="flex items-center gap-2">
-            <FolderGit2 className="h-5 w-5 text-indigo-400" />
-            <h2 className="text-base font-bold text-white">
+            <Folder className="h-5 w-5 text-primary" />
+            <h2 className="text-base font-bold text-on-surface">
               Recent Verification Cases
             </h2>
           </div>
           <Link
             to="/cases/new"
-            className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+            className="text-xs font-semibold text-primary hover:text-blue-800 flex items-center gap-1"
           >
             <span>+ Create Case</span>
           </Link>
         </div>
 
         {errorMsg && (
-          <div className="rounded-lg border border-rose-800 bg-rose-950/40 p-3 text-xs text-rose-300 flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+          <div className="rounded border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         {loading ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-12 text-center text-xs text-slate-400 font-mono">
+          <div className="rounded border border-outline-variant bg-surface-container-low p-10 text-center text-xs text-on-surface-variant font-mono">
             Loading verification cases...
           </div>
         ) : cases.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/30 p-12 text-center space-y-3">
-            <FileSearch className="h-8 w-8 text-slate-600 mx-auto" />
-            <h3 className="text-sm font-semibold text-slate-300">No Cases Ingested Yet</h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+          <div className="rounded border border-dashed border-outline-variant bg-surface-container-low p-10 text-center space-y-3">
+            <FileSearch className="h-8 w-8 text-on-surface-variant/50 mx-auto" />
+            <h3 className="text-sm font-semibold text-on-surface">No Cases Ingested Yet</h3>
+            <p className="text-xs text-on-surface-variant max-w-sm mx-auto">
               Get started by initializing a verification case, uploading suspect media, and providing context claims.
             </p>
             <Link
               to="/cases/new"
-              className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
+              className="inline-flex items-center gap-1.5 bg-primary-container hover:bg-primary text-white text-xs font-semibold px-4 py-2 rounded transition-colors shadow-sm"
             >
-              <PlusCircle className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
               <span>Create First Case</span>
             </Link>
           </div>
@@ -242,30 +241,30 @@ export const Landing: React.FC = () => {
               <Link
                 key={c.id}
                 to={`/cases/${c.id}`}
-                className="group rounded-xl border border-slate-800 bg-slate-900/70 p-5 hover:border-indigo-600/50 hover:bg-slate-900 transition-all flex flex-col justify-between space-y-3"
+                className="group rounded border border-outline-variant bg-white p-5 hover:border-primary/50 hover:shadow-sm transition-all flex flex-col justify-between space-y-3"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <span className="font-mono text-[10px] text-slate-400 uppercase">
+                    <span className="font-mono text-[10px] text-on-surface-variant uppercase font-semibold">
                       {c.id}
                     </span>
-                    <span className="inline-flex items-center rounded-full bg-slate-800 px-2.5 py-0.5 text-[10px] font-semibold uppercase text-indigo-400 border border-slate-700">
+                    <span className="inline-flex items-center rounded bg-[#D0E0FF] px-2.5 py-0.5 text-[10px] font-semibold uppercase text-[#0B1C32]">
                       {c.status}
                     </span>
                   </div>
-                  <h4 className="text-sm font-bold text-white group-hover:text-indigo-400 transition-colors">
+                  <h4 className="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">
                     {c.title}
                   </h4>
                   {c.description && (
-                    <p className="text-xs text-slate-400 line-clamp-2 mt-1">
+                    <p className="text-xs text-on-surface-variant line-clamp-2 mt-1">
                       {c.description}
                     </p>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-slate-500 pt-3 border-t border-slate-800/80">
+                <div className="flex items-center justify-between text-xs text-on-surface-variant pt-3 border-t border-outline-variant">
                   <span>{c.evidence_count} evidence item(s)</span>
-                  <span className="flex items-center gap-1 font-semibold text-indigo-400 group-hover:translate-x-0.5 transition-transform">
+                  <span className="flex items-center gap-1 font-semibold text-primary group-hover:translate-x-0.5 transition-transform">
                     Open Workbench <ArrowRight className="h-3 w-3" />
                   </span>
                 </div>

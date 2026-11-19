@@ -9,10 +9,6 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  HardDrive,
-  Calendar,
-  Layers,
-  FileCode,
 } from "lucide-react";
 import { api, SchemaEvidenceResponse } from "../api/client";
 
@@ -92,25 +88,27 @@ export const EvidenceViewer: React.FC<EvidenceViewerProps> = ({
   const meta = (evidence as any).metadata || {};
 
   return (
-    <div className={`rounded-xl border border-slate-800 bg-slate-900/80 p-5 space-y-4 ${className}`}>
+    <div className={`rounded border border-outline-variant bg-white p-5 space-y-4 shadow-sm ${className}`}>
       {/* Header & Badges */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant pb-3">
         <div className="flex items-center gap-2.5">
-          <FileCheck2 className="h-5 w-5 text-emerald-400" />
+          <div className="w-8 h-8 rounded bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200">
+            <FileCheck2 className="h-4 w-4" />
+          </div>
           <div>
-            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+            <h4 className="text-sm font-semibold text-on-surface flex items-center gap-2">
               <span>{evidence.filename}</span>
-              <span className="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-semibold text-slate-300 uppercase tracking-wide border border-slate-700">
+              <span className="rounded bg-surface-container px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant uppercase tracking-wide border border-outline-variant">
                 {evidence.modality}
               </span>
             </h4>
-            <span className="text-[10px] font-mono text-slate-500">ID: {evidence.id}</span>
+            <span className="text-[10px] font-mono text-on-surface-variant">ID: {evidence.id}</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           {/* Read-Only 0444 Permission Badge */}
-          <span className="inline-flex items-center gap-1 rounded border border-emerald-600/40 bg-emerald-950/40 px-2.5 py-1 text-[11px] font-semibold text-emerald-400">
+          <span className="inline-flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
             <Lock className="h-3 w-3" />
             mode 0444 (Read-Only)
           </span>
@@ -118,88 +116,88 @@ export const EvidenceViewer: React.FC<EvidenceViewerProps> = ({
       </div>
 
       {/* SHA-256 Badge & Verification State */}
-      <div className="rounded-lg border border-slate-800 bg-slate-950 p-3 space-y-2">
+      <div className="rounded border border-outline-variant bg-surface-container-low p-3 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-[11px] font-mono font-semibold text-slate-400 uppercase tracking-wider">
+          <span className="text-[11px] font-mono font-semibold text-on-surface-variant uppercase tracking-wider">
             Cryptographic SHA-256 Hash
           </span>
           {verificationResult && (
             <span
               className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${
                 verificationResult.match
-                  ? "bg-emerald-950/80 text-emerald-300 border-emerald-600"
-                  : "bg-rose-950/80 text-rose-300 border-rose-600"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-rose-50 text-rose-700 border-rose-200"
               }`}
             >
               {verificationResult.match ? (
                 <>
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
                   Hash Match Verified
                 </>
               ) : (
                 <>
-                  <XCircle className="h-3.5 w-3.5 text-rose-400" />
+                  <XCircle className="h-3.5 w-3.5 text-rose-600" />
                   Hash Mismatch Detected
                 </>
               )}
             </span>
           )}
         </div>
-        <p className="font-mono text-xs text-indigo-300 break-all bg-slate-900/60 p-2 rounded border border-slate-800/80 select-all">
+        <p className="font-mono text-xs text-primary break-all bg-white p-2 rounded border border-outline-variant select-all">
           {evidence.sha256}
         </p>
       </div>
 
       {/* Metadata Table */}
-      <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3 space-y-2">
-        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+      <div className="rounded border border-outline-variant bg-surface-container-low p-3 space-y-2">
+        <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
           Ingestion & File System Metadata
         </span>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
           <div className="space-y-0.5">
-            <span className="text-[10px] text-slate-500 block">File Size</span>
-            <span className="text-slate-200 font-semibold">{formatBytes(evidence.file_size_bytes)}</span>
+            <span className="text-[10px] text-on-surface-variant block">File Size</span>
+            <span className="text-on-surface font-semibold">{formatBytes(evidence.file_size_bytes)}</span>
           </div>
           <div className="space-y-0.5">
-            <span className="text-[10px] text-slate-500 block">MIME Type</span>
-            <span className="text-slate-200">{evidence.mime_type}</span>
+            <span className="text-[10px] text-on-surface-variant block">MIME Type</span>
+            <span className="text-on-surface">{evidence.mime_type}</span>
           </div>
           <div className="space-y-0.5">
-            <span className="text-[10px] text-slate-500 block">Storage Path</span>
-            <span className="text-slate-400 truncate block" title={evidence.file_path}>
+            <span className="text-[10px] text-on-surface-variant block">Storage Path</span>
+            <span className="text-on-surface-variant truncate block" title={evidence.file_path}>
               {evidence.file_path || "data/evidence/..."}
             </span>
           </div>
           <div className="space-y-0.5">
-            <span className="text-[10px] text-slate-500 block">Created At</span>
-            <span className="text-slate-400">{new Date(evidence.created_at).toLocaleString()}</span>
+            <span className="text-[10px] text-on-surface-variant block">Created At</span>
+            <span className="text-on-surface-variant">{new Date(evidence.created_at).toLocaleString()}</span>
           </div>
         </div>
 
         {/* Extra Stream/Exif Details if present in metadata */}
         {(meta.width || meta.height || meta.duration_sec || meta.fps || meta.sample_rate) && (
-          <div className="pt-2 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono text-slate-300">
+          <div className="pt-2 border-t border-outline-variant grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono text-on-surface">
             {meta.width && meta.height && (
               <div>
-                <span className="text-[10px] text-slate-500 block">Resolution</span>
+                <span className="text-[10px] text-on-surface-variant block">Resolution</span>
                 <span>{meta.width} × {meta.height} px</span>
               </div>
             )}
             {meta.duration_sec && (
               <div>
-                <span className="text-[10px] text-slate-500 block">Duration</span>
+                <span className="text-[10px] text-on-surface-variant block">Duration</span>
                 <span>{meta.duration_sec} s</span>
               </div>
             )}
             {meta.fps && (
               <div>
-                <span className="text-[10px] text-slate-500 block">Framerate</span>
+                <span className="text-[10px] text-on-surface-variant block">Framerate</span>
                 <span>{meta.fps} fps</span>
               </div>
             )}
             {meta.sample_rate && (
               <div>
-                <span className="text-[10px] text-slate-500 block">Sample Rate</span>
+                <span className="text-[10px] text-on-surface-variant block">Sample Rate</span>
                 <span>{meta.sample_rate} Hz</span>
               </div>
             )}
@@ -207,9 +205,9 @@ export const EvidenceViewer: React.FC<EvidenceViewerProps> = ({
         )}
 
         {evidence.source_note && (
-          <div className="pt-2 border-t border-slate-800/80 text-xs">
-            <span className="text-[10px] text-slate-500 block uppercase font-mono">Source Note</span>
-            <p className="text-slate-300 italic mt-0.5">"{evidence.source_note}"</p>
+          <div className="pt-2 border-t border-outline-variant text-xs">
+            <span className="text-[10px] text-on-surface-variant block uppercase font-mono">Source Note</span>
+            <p className="text-on-surface italic mt-0.5">"{evidence.source_note}"</p>
           </div>
         )}
       </div>
@@ -222,12 +220,12 @@ export const EvidenceViewer: React.FC<EvidenceViewerProps> = ({
             type="button"
             onClick={handleVerifyHash}
             disabled={isVerifying}
-            className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 bg-white hover:bg-surface-container-low text-on-surface text-xs font-semibold px-3 py-1.5 rounded border border-outline-variant transition-colors disabled:opacity-50 shadow-sm"
           >
             {isVerifying ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-400" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
             ) : (
-              <RotateCw className="h-3.5 w-3.5 text-indigo-400" />
+              <RotateCw className="h-3.5 w-3.5 text-primary" />
             )}
             <span>Verify Hash</span>
           </button>
@@ -236,9 +234,9 @@ export const EvidenceViewer: React.FC<EvidenceViewerProps> = ({
           <a
             href={`/api/evidence/${evidence.id}/file`}
             download={evidence.filename}
-            className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 transition-colors"
+            className="flex items-center gap-1.5 bg-white hover:bg-surface-container-low text-on-surface text-xs font-semibold px-3 py-1.5 rounded border border-outline-variant transition-colors shadow-sm"
           >
-            <Download className="h-3.5 w-3.5 text-emerald-400" />
+            <Download className="h-3.5 w-3.5 text-emerald-600" />
             <span>Download Original</span>
           </a>
         </div>
@@ -247,26 +245,26 @@ export const EvidenceViewer: React.FC<EvidenceViewerProps> = ({
         <button
           type="button"
           onClick={() => setShowDeleteModal(true)}
-          className="flex items-center gap-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/60 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+          className="flex items-center gap-1.5 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold px-3 py-1.5 rounded transition-colors shadow-sm"
         >
-          <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+          <Trash2 className="h-3.5 w-3.5 text-rose-600" />
           <span>Delete Evidence</span>
         </button>
       </div>
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-md rounded-2xl border border-rose-900/80 bg-slate-900 p-6 shadow-2xl space-y-4">
-            <div className="flex items-center gap-3 text-rose-400">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md rounded-lg border border-rose-200 bg-white p-6 shadow-xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-600">
               <AlertTriangle className="h-6 w-6 shrink-0" />
-              <h3 className="text-base font-bold text-white">Permanently Delete Evidence?</h3>
+              <h3 className="text-base font-bold text-on-surface">Permanently Delete Evidence?</h3>
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              This action will remove <strong className="text-white">{evidence.filename}</strong> and tombstone its cryptographic hash in the audit trail. Dependent observations will be deleted.
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              This action will remove <strong className="text-on-surface">{evidence.filename}</strong> and tombstone its cryptographic hash in the audit trail. Dependent observations will be deleted.
             </p>
             {deleteError && (
-              <p className="text-xs text-rose-400 bg-rose-950/40 p-2 rounded border border-rose-800">
+              <p className="text-xs text-rose-700 bg-rose-50 p-2 rounded border border-rose-200">
                 {deleteError}
               </p>
             )}
@@ -275,7 +273,7 @@ export const EvidenceViewer: React.FC<EvidenceViewerProps> = ({
                 type="button"
                 onClick={() => setShowDeleteModal(false)}
                 disabled={isDeleting}
-                className="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                className="px-4 py-2 rounded text-xs font-semibold bg-white hover:bg-surface-container-low text-on-surface border border-outline-variant transition-colors"
               >
                 Cancel
               </button>
@@ -283,7 +281,7 @@ export const EvidenceViewer: React.FC<EvidenceViewerProps> = ({
                 type="button"
                 onClick={handleDeleteConfirm}
                 disabled={isDeleting}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white transition-colors disabled:opacity-50 shadow-sm"
               >
                 {isDeleting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 <span>Confirm Permanent Deletion</span>

@@ -11,6 +11,8 @@ import {
   FileSearch,
   Sparkles,
   RotateCw,
+  Cpu,
+  CheckCircle2,
 } from "lucide-react";
 import {
   api,
@@ -18,6 +20,7 @@ import {
   SchemaEvidenceResponse,
   SchemaObservation,
 } from "../api/client";
+import { CaseHeaderTabs } from "../components/CaseHeaderTabs";
 import { ObservationCard } from "../components/ObservationCard";
 import { NotAnalyzedCard } from "../components/NotAnalyzedCard";
 import { EvidenceViewer } from "../components/EvidenceViewer";
@@ -96,7 +99,6 @@ export const Image: React.FC = () => {
     const refW = naturalDimensions?.width || meta.width || 3840;
     const refH = naturalDimensions?.height || meta.height || 2160;
 
-    // Check if roi is already percentage (<= 1.0) or absolute pixels
     const isNormalized = roi.w <= 1.0 && roi.h <= 1.0 && roi.x <= 1.0 && roi.y <= 1.0;
     const leftPct = isNormalized ? roi.x * 100 : (roi.x / refW) * 100;
     const topPct = isNormalized ? roi.y * 100 : (roi.y / refH) * 100;
@@ -114,36 +116,29 @@ export const Image: React.FC = () => {
   const roiStyle = getRoiStyle();
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Top Breadcrumb */}
-      <div className="flex items-center justify-between">
-        <Link
-          to={`/cases/${caseId}`}
-          className="text-xs text-slate-400 hover:text-white flex items-center gap-1 font-medium transition-colors"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to Case Dashboard
-        </Link>
-      </div>
+    <div className="p-6 lg:p-8 max-w-[1520px] mx-auto w-full flex flex-col gap-6">
+      {/* Stitch Case Navigation Tabs */}
+      {caseDetail && <CaseHeaderTabs caseData={caseDetail.case} caseId={caseId || ""} />}
 
       {/* Screen Title & Evidence Selector */}
-      <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-3">
-        <div className="flex items-center gap-2">
-          <ImageIcon className="h-5 w-5 text-indigo-400" />
-          <h1 className="text-xl font-bold text-white">
+      <div className="flex flex-wrap items-center justify-between border-b border-slate-200 pb-3 gap-3">
+        <div className="flex items-center gap-2.5">
+          <ImageIcon className="h-5 w-5 text-blue-600" />
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
             Image Forensic Inspection (Module 13A)
-          </h1>
+          </h2>
         </div>
 
         {imageEvidenceList.length > 1 && (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400">Select Image:</span>
+            <span className="text-xs font-semibold text-slate-600">Select Image:</span>
             <select
               value={selectedEvidence?.id || ""}
               onChange={(e) => {
                 const ev = imageEvidenceList.find((item) => item.id === e.target.value);
                 if (ev) setSelectedEvidence(ev);
               }}
-              className="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-lg px-2.5 py-1 focus:outline-none"
+              className="bg-white border border-slate-300 text-slate-900 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {imageEvidenceList.map((ev) => (
                 <option key={ev.id} value={ev.id}>
@@ -155,53 +150,53 @@ export const Image: React.FC = () => {
         )}
       </div>
 
-      {/* Forensic Advisory Banner */}
-      <div className="rounded-xl border border-amber-900/50 bg-amber-950/20 p-4 space-y-1.5 text-xs">
-        <div className="flex items-center gap-2 text-amber-400 font-bold uppercase tracking-wider text-[11px]">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
+      {/* Forensic Limitation Advisory Banner */}
+      <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 space-y-1.5 text-xs">
+        <div className="flex items-center gap-2 text-amber-900 font-bold uppercase tracking-wider text-[11px]">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
           <span>Forensic Limitation & False-Positive Advisory</span>
         </div>
-        <p className="text-amber-200/90 leading-relaxed">
+        <p className="text-amber-800 leading-relaxed">
           Absence of EXIF metadata, secondary JPEG recompression grids, and localized Error Level Analysis (ELA) luminance gradients frequently arise from routine social media uploads, image resizing, or legitimate cropping. They do not constitute standalone proof of manipulation without verified multi-modal corroboration.
         </p>
       </div>
 
       {errorMsg && (
-        <div className="rounded-lg border border-rose-800 bg-rose-950/40 p-3 text-xs text-rose-300">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700">
           {errorMsg}
         </div>
       )}
 
       {loading ? (
-        <div className="text-xs text-slate-400 font-mono py-16 text-center">
+        <div className="text-xs text-slate-500 font-mono py-16 text-center">
           Loading image forensic findings...
         </div>
       ) : !selectedEvidence ? (
-        <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/30 p-16 text-center text-xs text-slate-500">
-          <ImageIcon className="h-8 w-8 text-slate-600 mx-auto mb-2" />
+        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-16 text-center text-xs text-slate-500">
+          <ImageIcon className="h-8 w-8 text-slate-400 mx-auto mb-2" />
           No image evidence items registered in this case.
         </div>
       ) : (
         <div className="space-y-6">
           {/* Multi-Layer Viewer */}
-          <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-6 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4 text-indigo-400" />
-                <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                <Layers className="h-4 w-4 text-blue-600" />
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                   Interactive Forensic Layer Viewer
                 </h3>
               </div>
 
               {/* View Mode Toggle Buttons */}
-              <div className="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800">
+              <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-lg border border-slate-200">
                 <button
                   type="button"
                   onClick={() => setViewerMode("original")}
                   className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
                     viewerMode === "original"
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-white text-blue-600 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   Original Image
@@ -211,8 +206,8 @@ export const Image: React.FC = () => {
                   onClick={() => setViewerMode("ela")}
                   className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
                     viewerMode === "ela"
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-white text-blue-600 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   ELA Heatmap
@@ -222,8 +217,8 @@ export const Image: React.FC = () => {
                   onClick={() => setViewerMode("copymove")}
                   className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
                     viewerMode === "copymove"
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-white text-blue-600 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   Copy-Move Overlay
@@ -233,8 +228,8 @@ export const Image: React.FC = () => {
                   onClick={() => setViewerMode("split")}
                   className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
                     viewerMode === "split"
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-white text-blue-600 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   Split Side-by-Side
@@ -243,31 +238,31 @@ export const Image: React.FC = () => {
             </div>
 
             {/* Viewer Display Surface */}
-            <div className="relative rounded-lg border border-slate-800 bg-slate-950 overflow-hidden flex items-center justify-center min-h-[420px] p-3">
+            <div className="relative rounded-lg border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center min-h-[440px] p-4">
               {viewerMode === "split" ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full h-full">
                   <div className="space-y-2 text-center">
-                    <span className="text-[11px] font-mono text-slate-400 font-bold block">
+                    <span className="text-xs font-mono text-slate-700 font-bold block">
                       Original Evidence
                     </span>
                     <img
                       src={originalImageUrl}
                       alt="Original"
-                      className="max-h-[420px] mx-auto rounded object-contain border border-slate-800"
+                      className="max-h-[420px] mx-auto rounded object-contain border border-slate-200 shadow-xs bg-white"
                     />
                   </div>
                   <div className="space-y-2 text-center">
-                    <span className="text-[11px] font-mono text-indigo-400 font-bold block">
+                    <span className="text-xs font-mono text-blue-600 font-bold block">
                       ELA Heatmap (Error Level Analysis)
                     </span>
                     {elaImageUrl ? (
                       <img
                         src={elaImageUrl}
                         alt="ELA Heatmap"
-                        className="max-h-[420px] mx-auto rounded object-contain border border-slate-800"
+                        className="max-h-[420px] mx-auto rounded object-contain border border-slate-200 shadow-xs bg-black"
                       />
                     ) : (
-                      <div className="flex h-[360px] items-center justify-center rounded border border-dashed border-slate-800 text-xs text-slate-500 font-mono">
+                      <div className="flex h-[360px] items-center justify-center rounded border border-dashed border-slate-200 text-xs text-slate-500 font-mono">
                         No ELA artifact rendered.
                       </div>
                     )}
@@ -279,14 +274,14 @@ export const Image: React.FC = () => {
                     <img
                       src={elaImageUrl}
                       alt="Error Level Analysis"
-                      className="max-h-[480px] mx-auto rounded object-contain shadow-2xl"
+                      className="max-h-[480px] mx-auto rounded object-contain shadow-md bg-black"
                     />
                   ) : (
                     <div className="p-12 text-center text-xs text-slate-500 font-mono">
                       No ELA artifact available for this image.
                     </div>
                   )}
-                  <p className="mt-3 text-[11px] font-mono text-slate-400">
+                  <p className="mt-3 text-xs font-mono text-slate-500">
                     Error Level Analysis: resaves at quality 90 and calculates error differences to reveal compression inconsistencies.
                   </p>
                 </div>
@@ -300,7 +295,7 @@ export const Image: React.FC = () => {
                       const img = e.currentTarget;
                       setNaturalDimensions({ width: img.naturalWidth, height: img.naturalHeight });
                     }}
-                    className="max-h-[480px] rounded object-contain"
+                    className="max-h-[480px] rounded object-contain shadow-xs"
                   />
 
                   {/* SVG Copy-Move Bounding Box Overlay */}
@@ -309,9 +304,9 @@ export const Image: React.FC = () => {
                       style={roiStyle}
                       onClick={() => setHighlightedObsId(copyMoveObs?.id || null)}
                       title="Click to view Copy-Move Observation Finding"
-                      className="absolute border-2 border-dashed border-rose-500 bg-rose-500/25 cursor-pointer rounded transition-all hover:bg-rose-500/40 hover:scale-[1.02] shadow-lg animate-pulse"
+                      className="absolute border-2 border-dashed border-red-500 bg-red-500/25 cursor-pointer rounded transition-all hover:bg-red-500/40 hover:scale-[1.02] shadow-md animate-pulse"
                     >
-                      <span className="absolute -top-6 left-0 bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow whitespace-nowrap">
+                      <span className="absolute -top-6 left-0 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow whitespace-nowrap">
                         Cloned Region (SIFT Cluster: {copyMoveDetails.cluster_size || 84} pts)
                       </span>
                     </div>
@@ -327,8 +322,8 @@ export const Image: React.FC = () => {
                         y={roi.y <= 1 ? roi.y * (naturalDimensions?.height || 2160) : roi.y}
                         width={roi.w <= 1 ? roi.w * (naturalDimensions?.width || 3840) : roi.w}
                         height={roi.h <= 1 ? roi.h * (naturalDimensions?.height || 2160) : roi.h}
-                        fill="rgba(244, 63, 94, 0.15)"
-                        stroke="#f43f5e"
+                        fill="rgba(239, 68, 68, 0.15)"
+                        stroke="#ef4444"
                         strokeWidth="3"
                         strokeDasharray="6,4"
                       />
@@ -345,7 +340,7 @@ export const Image: React.FC = () => {
                       const img = e.currentTarget;
                       setNaturalDimensions({ width: img.naturalWidth, height: img.naturalHeight });
                     }}
-                    className="max-h-[480px] mx-auto rounded object-contain"
+                    className="max-h-[480px] mx-auto rounded object-contain shadow-xs"
                   />
                 </div>
               )}
@@ -353,70 +348,70 @@ export const Image: React.FC = () => {
           </div>
 
           {/* EXIF & JPEG Quantization Table */}
-          <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <Camera className="h-4 w-4 text-indigo-400" />
-                <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                <Camera className="h-4 w-4 text-blue-600" />
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                   EXIF & JPEG Quantization Table
                 </h3>
               </div>
               {exifObs?.indicator === "exif_missing" ? (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-sky-400 bg-sky-950/60 border border-sky-800 px-2 py-0.5 rounded">
-                  <Info className="h-3 w-3" /> EXIF Stripped (Standard on Social Apps)
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded">
+                  <Info className="h-3.5 w-3.5" /> EXIF Stripped (Standard on Social Apps)
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded">
-                  EXIF Tags Extracted
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> EXIF Tags Extracted
                 </span>
               )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950 p-3">
-                <h4 className="font-semibold text-slate-300 font-mono text-[11px] uppercase">
+              <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3.5">
+                <h4 className="font-semibold text-slate-800 font-mono text-[11px] uppercase">
                   Hardware & Temporal Headers
                 </h4>
-                <div className="divide-y divide-slate-800/80 text-[11px] font-mono">
+                <div className="divide-y divide-slate-200 text-xs font-mono">
                   <div className="flex justify-between py-1.5">
                     <span className="text-slate-500">Camera Make:</span>
-                    <span className="text-slate-200">{(exifObs?.details as any)?.make || (selectedEvidence as any)?.metadata?.exif?.Make || "Canon"}</span>
+                    <span className="text-slate-900 font-medium">{(exifObs?.details as any)?.make || (selectedEvidence as any)?.metadata?.exif?.Make || "Canon"}</span>
                   </div>
                   <div className="flex justify-between py-1.5">
                     <span className="text-slate-500">Camera Model:</span>
-                    <span className="text-slate-200">{(exifObs?.details as any)?.model || (selectedEvidence as any)?.metadata?.exif?.Model || "EOS R6"}</span>
+                    <span className="text-slate-900 font-medium">{(exifObs?.details as any)?.model || (selectedEvidence as any)?.metadata?.exif?.Model || "EOS R6"}</span>
                   </div>
                   <div className="flex justify-between py-1.5">
                     <span className="text-slate-500">Original DateTime:</span>
-                    <span className="text-slate-200">{(exifObs?.details as any)?.datetime_original || (selectedEvidence as any)?.metadata?.exif?.DateTimeOriginal || "2026-11-18 14:32:00"}</span>
+                    <span className="text-slate-900 font-medium">{(exifObs?.details as any)?.datetime_original || (selectedEvidence as any)?.metadata?.exif?.DateTimeOriginal || "2026-11-18 14:32:00"}</span>
                   </div>
                   <div className="flex justify-between py-1.5">
                     <span className="text-slate-500">Editing Software:</span>
-                    <span className="text-slate-200">{(exifObs?.details as any)?.software || "None (Direct Sensor Dump)"}</span>
+                    <span className="text-slate-900 font-medium">{(exifObs?.details as any)?.software || "None (Direct Sensor Dump)"}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950 p-3">
-                <h4 className="font-semibold text-slate-300 font-mono text-[11px] uppercase">
+              <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3.5">
+                <h4 className="font-semibold text-slate-800 font-mono text-[11px] uppercase">
                   JPEG Quantization Matrix & Compression Bounds
                 </h4>
-                <div className="divide-y divide-slate-800/80 text-[11px] font-mono">
+                <div className="divide-y divide-slate-200 text-xs font-mono">
                   <div className="flex justify-between py-1.5">
                     <span className="text-slate-500">Estimated Quality:</span>
-                    <span className="text-slate-200 font-bold">{(jpegObs?.details as any)?.estimated_quality || "92% Standard"}</span>
+                    <span className="text-slate-900 font-bold">{(jpegObs?.details as any)?.estimated_quality || "92% Standard"}</span>
                   </div>
                   <div className="flex justify-between py-1.5">
                     <span className="text-slate-500">Luminance Table Hash:</span>
-                    <span className="text-slate-200">{(jpegObs?.details as any)?.dqt_hash || "dqt_canon_std_01"}</span>
+                    <span className="text-slate-900 font-medium">{(jpegObs?.details as any)?.dqt_hash || "dqt_canon_std_01"}</span>
                   </div>
                   <div className="flex justify-between py-1.5">
                     <span className="text-slate-500">Chroma Subsampling:</span>
-                    <span className="text-slate-200">{(jpegObs?.details as any)?.subsampling || "4:2:0 YUV"}</span>
+                    <span className="text-slate-900 font-medium">{(jpegObs?.details as any)?.subsampling || "4:2:0 YUV"}</span>
                   </div>
                   <div className="flex justify-between py-1.5">
                     <span className="text-slate-500">Recompression Discrepancy:</span>
-                    <span className="text-slate-200">{(jpegObs?.details as any)?.recompression ? "Detected (Secondary)" : "Single Generation"}</span>
+                    <span className="text-slate-900 font-medium">{(jpegObs?.details as any)?.recompression ? "Detected (Secondary)" : "Single Generation"}</span>
                   </div>
                 </div>
               </div>
@@ -432,11 +427,10 @@ export const Image: React.FC = () => {
 
           {/* Image Observation Findings */}
           <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono">
               Image Forensic Findings ({observations.length})
             </h3>
 
-            {/* Render any failed/skipped card */}
             {observations.length === 0 && (
               <NotAnalyzedCard
                 analyzerName="Image SIFT & ELA Analyzers"

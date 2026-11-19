@@ -4,18 +4,22 @@ import {
   UploadCloud,
   FileCheck2,
   Lock,
-  MessageSquare,
   Play,
   AlertCircle,
   Plus,
   Loader2,
   Trash2,
-  File,
+  FileText,
   Film,
   Image as ImageIcon,
   Music,
   Info,
   ShieldCheck,
+  CheckCircle2,
+  Sparkles,
+  Copy,
+  Layers,
+  Fingerprint,
 } from "lucide-react";
 import { api } from "../api/client";
 
@@ -32,6 +36,8 @@ export const NewCase: React.FC = () => {
   // Case Metadata
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
+  const [leadInvestigator, setLeadInvestigator] = useState("A. Vance (Forensic Unit 4 - Biometrics)");
+  const [priority, setPriority] = useState<"routine" | "expedited" | "critical">("expedited");
 
   // Files Queue
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
@@ -62,7 +68,7 @@ export const NewCase: React.FC = () => {
     const newItems: PendingFile[] = [];
 
     Array.from(fileList).forEach((file) => {
-      // 200 MB limit check (200 * 1024 * 1024 = 209715200 bytes)
+      // 200 MB limit check
       if (file.size > 200 * 1024 * 1024) {
         setErrorMsg(`File "${file.name}" exceeds the 200 MB size limit.`);
         return;
@@ -107,6 +113,7 @@ export const NewCase: React.FC = () => {
 
   // Format file size
   const formatBytes = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -114,8 +121,8 @@ export const NewCase: React.FC = () => {
   };
 
   // Main submission: Ingest case + files + claims, then Start Analysis
-  const handleStartAnalysis = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleStartAnalysis = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!title.trim()) {
       setErrorMsg("Please provide a title for the case.");
       return;
@@ -131,10 +138,16 @@ export const NewCase: React.FC = () => {
     try {
       // 1. Create Case
       setCurrentProgressStep("Initializing verification case in database...");
+      const fullNotes = [
+        notes.trim(),
+        `Lead Investigator: ${leadInvestigator}`,
+        `Priority: ${priority.toUpperCase()}`,
+      ].filter(Boolean).join("\n");
+
       const caseRes = await api.createCase({
         title: title.trim(),
-        description: notes.trim(),
-        notes: notes.trim(),
+        description: fullNotes,
+        notes: fullNotes,
       });
       const caseId = caseRes.id;
 
@@ -165,251 +178,438 @@ export const NewCase: React.FC = () => {
     }
   };
 
+  const totalBytes = pendingFiles.reduce((acc, f) => acc + f.file.size, 0);
+
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <ShieldCheck className="h-5 w-5 text-indigo-400" />
-          <h1 className="text-2xl font-black text-white">Create Verification Case</h1>
+    <div className="p-6 lg:p-8 max-w-[1520px] mx-auto w-full flex flex-col gap-6">
+      {/* Top Action Header Banner */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-1">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl lg:text-3xl font-semibold text-slate-900 tracking-tight">
+              New Investigation
+            </h1>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold tracking-wide border border-blue-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+              INTAKE STAGE
+            </span>
+          </div>
+          <p className="text-sm text-slate-500 max-w-2xl">
+            Initialize forensic analysis by registering case parameters and uploading digital media assets with guaranteed cryptographic provenance.
+          </p>
         </div>
-        <p className="text-xs text-slate-400">
-          Ingest media into the tamper-evident read-only repository (mode 0444) and trigger rule-based forensic analysis.
-        </p>
+
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => navigate("/history")}
+            className="h-9 px-4 bg-white text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 border border-slate-200 transition-colors shadow-sm"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => handleStartAnalysis()}
+            disabled={isSubmitting || (pendingFiles.length === 0 && !captionText.trim())}
+            className="h-9 px-5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? (
+              <Loader2 className="h-4 w-4 animate-spin text-white" />
+            ) : (
+              <Play className="h-4 w-4 fill-white" />
+            )}
+            <span>{isSubmitting ? "Initializing Pipeline..." : "Start Analysis"}</span>
+          </button>
+        </div>
       </div>
 
       {errorMsg && (
-        <div className="rounded-lg border border-rose-800 bg-rose-950/40 p-3 text-xs text-rose-300 flex items-center gap-2">
-          <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
-          <span>{errorMsg}</span>
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 flex items-center gap-3 shadow-sm">
+          <AlertCircle className="h-5 w-5 shrink-0 text-red-600" />
+          <span className="font-medium">{errorMsg}</span>
         </div>
       )}
 
-      <form onSubmit={handleStartAnalysis} className="space-y-6">
-        {/* Section 1: Case Details */}
-        <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-6 space-y-4">
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-[10px] text-white">
-              1
-            </span>
-            <span>Case Identification & Context</span>
-          </h2>
+      {isSubmitting && currentProgressStep && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 flex items-center gap-3 shadow-sm animate-pulse">
+          <Loader2 className="h-5 w-5 shrink-0 animate-spin text-blue-600" />
+          <span className="font-medium">{currentProgressStep}</span>
+        </div>
+      )}
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Case Title *
+      <form onSubmit={handleStartAnalysis} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Case Parameters & Analysis Pipelines (approx 58%) */}
+        <div className="lg:col-span-7 flex flex-col gap-6">
+          {/* Case Information Card */}
+          <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-blue-600" />
+                <h2 className="text-base font-semibold text-slate-900">Case Information</h2>
+              </div>
+              <span className="text-xs text-slate-400 font-mono font-medium">CHAIN-OF-CUSTODY V4.2</span>
+            </div>
+
+            {/* Case Title Input */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
+              <label className="text-xs font-semibold text-slate-700 pt-2" htmlFor="case-title">
+                Case Title / Subject <span className="text-red-500">*</span>
               </label>
+              <div className="sm:col-span-2 flex flex-col gap-1">
+                <input
+                  id="case-title"
+                  type="text"
+                  placeholder="e.g. Campus Tech Fest Attendance Claim Verification"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  disabled={isSubmitting}
+                  required
+                  className="w-full bg-white text-slate-900 text-sm px-3.5 py-2 rounded-lg border border-slate-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder:text-slate-400 disabled:opacity-50"
+                />
+                <span className="text-xs text-slate-400">Clear descriptive summary for judicial dossier export.</span>
+              </div>
+            </div>
+
+            {/* Description & Claimed Context */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
+              <label className="text-xs font-semibold text-slate-700 pt-2" htmlFor="case-desc">
+                Context & Provenance Notes
+              </label>
+              <div className="sm:col-span-2 flex flex-col gap-1">
+                <textarea
+                  id="case-desc"
+                  rows={3}
+                  placeholder="Describe alleged context, origin platform, claimed timestamp, and transmission vector..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  disabled={isSubmitting}
+                  className="w-full bg-white text-slate-900 text-sm p-3 rounded-lg border border-slate-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder:text-slate-400 resize-none disabled:opacity-50"
+                />
+              </div>
+            </div>
+
+            {/* Lead Investigator */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+              <label className="text-xs font-semibold text-slate-700" htmlFor="lead-investigator">
+                Lead Investigator
+              </label>
+              <div className="sm:col-span-2 relative">
+                <select
+                  id="lead-investigator"
+                  value={leadInvestigator}
+                  onChange={(e) => setLeadInvestigator(e.target.value)}
+                  disabled={isSubmitting}
+                  className="w-full bg-white text-slate-900 text-sm px-3.5 py-2 rounded-lg border border-slate-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
+                >
+                  <option>A. Vance (Forensic Unit 4 - Biometrics)</option>
+                  <option>M. Reyes (Digital Media Extraction)</option>
+                  <option>S. Zhang (Neural Synthesis & Deepfake Analysis)</option>
+                  <option>K. Lindqvist (Hardware Cryptography & Vault)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Priority Selector */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
+              <label className="text-xs font-semibold text-slate-700 pt-1">
+                Investigation Priority
+              </label>
+              <div className="sm:col-span-2 grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPriority("routine")}
+                  className={`p-2.5 rounded-lg border text-center transition-colors flex flex-col items-center justify-center ${
+                    priority === "routine"
+                      ? "bg-slate-100 border-slate-400 text-slate-900 font-semibold"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className="text-xs font-medium">Routine</span>
+                  <span className="text-[11px] text-slate-500">24-48 hrs</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPriority("expedited")}
+                  className={`p-2.5 rounded-lg border text-center transition-colors flex flex-col items-center justify-center ${
+                    priority === "expedited"
+                      ? "bg-blue-50 border-blue-400 text-blue-900 font-semibold"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className="text-xs font-semibold text-blue-700">Expedited</span>
+                  <span className="text-[11px] text-slate-500">4-8 hrs</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPriority("critical")}
+                  className={`p-2.5 rounded-lg border text-center transition-colors flex flex-col items-center justify-center ${
+                    priority === "critical"
+                      ? "bg-red-50 border-red-400 text-red-900 font-semibold"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className="text-xs font-semibold text-red-700">Critical Review</span>
+                  <span className="text-[11px] text-slate-500">&lt; 1 hr</span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* Social Media Caption & Narrative Claims */}
+          <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-blue-600" />
+                <h2 className="text-base font-semibold text-slate-900">
+                  Social Media Caption & Narrative Claims
+                </h2>
+              </div>
+              <span className="text-xs text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                NLP Modality
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Post Text or Stated Claim
+                </label>
+                <textarea
+                  placeholder="e.g. Record turnout: 3,000 attendees gathered at Main Plaza for Tech Fest 2026!"
+                  rows={2}
+                  value={captionText}
+                  onChange={(e) => setCaptionText(e.target.value)}
+                  disabled={isSubmitting}
+                  className="w-full bg-white border border-slate-300 rounded-lg p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold text-slate-600">Claim Source:</span>
+                <select
+                  value={captionSource}
+                  onChange={(e) => setCaptionSource(e.target.value)}
+                  disabled={isSubmitting}
+                  className="bg-white border border-slate-300 text-slate-800 text-xs rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="social_post">Social Media Post</option>
+                  <option value="alt_text">Alt Text / Description</option>
+                  <option value="press_release">Press Release</option>
+                  <option value="user_input">User Provided Context</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {/* Analysis Pipeline Configuration Notice */}
+          <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col gap-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Layers className="h-5 w-5 text-blue-600" />
+                <h2 className="text-base font-semibold text-slate-900">Analysis Pipelines (Automated)</h2>
+              </div>
+              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                4 Active Engines
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-600">
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <div className="font-semibold text-slate-800 flex items-center justify-between mb-1">
+                  <span>Image Forensics</span>
+                  <span className="font-mono text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">ELA + Copy-Move</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Error Level Analysis, clone block matching, quantization tables, and EXIF consistency.</p>
+              </div>
+
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <div className="font-semibold text-slate-800 flex items-center justify-between mb-1">
+                  <span>Video Forensics</span>
+                  <span className="font-mono text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">PTS + Scene Cuts</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Frame presentation timestamp jitter, hard cut detection, and container atom audits.</p>
+              </div>
+
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <div className="font-semibold text-slate-800 flex items-center justify-between mb-1">
+                  <span>Audio Forensics</span>
+                  <span className="font-mono text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">FFT + ENF</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Spectral continuity, silence anomaly detection, and electric grid frequency cues.</p>
+              </div>
+
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <div className="font-semibold text-slate-800 flex items-center justify-between mb-1">
+                  <span>Cross-Modal Correlation</span>
+                  <span className="font-mono text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">Rule Engine R1-R7</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Contradiction synthesis between audio-visual timing, stated claims, and EXIF timestamps.</p>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* Right Column: Evidence Dropzone & Staged Queue (approx 42%) */}
+        <div className="lg:col-span-5 flex flex-col gap-6">
+          {/* Evidence Dropzone */}
+          <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <UploadCloud className="h-5 w-5 text-blue-600" />
+                <h2 className="text-base font-semibold text-slate-900">Evidence Ingestion</h2>
+              </div>
+              <span className="text-xs text-slate-500 font-mono">MAX 200 MB / FILE</span>
+            </div>
+
+            {/* Drop Zone Box */}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`p-6 rounded-xl border-2 border-dashed flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+                isDragging
+                  ? "border-blue-500 bg-blue-50/60"
+                  : "border-slate-300 bg-slate-50 hover:bg-slate-100/70 hover:border-slate-400"
+              }`}
+            >
               <input
-                type="text"
-                placeholder="e.g. Campus Tech Fest Attendance Claim Verification"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.webm,.wav,.mp3,.m4a"
+                onChange={(e) => {
+                  handleFilesSelected(e.target.files);
+                  e.target.value = "";
+                }}
                 disabled={isSubmitting}
-                required
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                className="hidden"
               />
+              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mb-3 shadow-xs">
+                <UploadCloud className="h-6 w-6" />
+              </div>
+              <h3 className="text-sm font-semibold text-slate-900 mb-1">
+                Drag & Drop Digital Media Assets
+              </h3>
+              <p className="text-xs text-slate-500 max-w-xs mb-3">
+                Ingest raw audio, video, container images, or contextual caption transcripts from local storage.
+              </p>
+              <button
+                type="button"
+                className="h-8 px-4 bg-white text-blue-600 text-xs font-semibold rounded-md border border-slate-200 shadow-xs hover:bg-slate-50 transition-colors"
+              >
+                Browse Local Workstation
+              </button>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Context & Provenance Notes (Optional)
-              </label>
-              <textarea
-                placeholder="Originating URL, claimed event timestamp, source credibility notes, or investigative context..."
-                rows={3}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                disabled={isSubmitting}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
-              />
+            {/* Cryptographic Ingestion Guarantee Banner */}
+            <div className="flex items-start gap-3 p-3.5 rounded-lg bg-blue-50/60 border border-blue-100 text-slate-700">
+              <Fingerprint className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+              <div className="flex flex-col gap-1 text-xs">
+                <span className="font-semibold text-slate-900">Cryptographic Ingestion Guarantee</span>
+                <p className="text-slate-600 leading-relaxed">
+                  All media payloads are hashed with <code className="font-mono bg-white px-1 py-0.5 rounded border border-blue-200 text-slate-800">SHA-256</code> and sealed into read-only storage (mode <code className="font-mono bg-white px-1 py-0.5 rounded border border-blue-200 text-slate-800">0444</code>).
+                </p>
+                <div className="flex flex-wrap gap-1 mt-1 font-mono text-[10px]">
+                  <span className="px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-600">JPEG</span>
+                  <span className="px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-600">PNG</span>
+                  <span className="px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-600">MP4</span>
+                  <span className="px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-600">MOV</span>
+                  <span className="px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-600">WAV</span>
+                  <span className="px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-600">MP3</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Section 2: Multi-File Evidence Upload */}
-        <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-6 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-[10px] text-white">
-                2
-              </span>
-              <span>Evidence Files (Images, Videos, Audio)</span>
-            </h2>
-
-            {/* Compliance Limits Badges */}
-            <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
-              <span className="rounded bg-slate-800 border border-slate-700 px-2 py-0.5 text-slate-300">
-                Limit: 200 MB per file
-              </span>
-              <span className="rounded bg-indigo-950/70 border border-indigo-800 px-2 py-0.5 text-indigo-300">
-                Video Demo Cap: 5 Minutes
+          {/* Staged Assets Queue */}
+          <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <FileCheck2 className="h-5 w-5 text-blue-600" />
+                <h2 className="text-base font-semibold text-slate-900">
+                  Staged Evidence Queue ({pendingFiles.length})
+                </h2>
+              </div>
+              <span className="text-xs text-slate-500 font-mono font-medium">
+                {formatBytes(totalBytes)} Total
               </span>
             </div>
-          </div>
 
-          {/* Drag & Drop Area */}
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
-              isDragging
-                ? "border-indigo-500 bg-indigo-950/20"
-                : "border-slate-800 bg-slate-950 hover:border-slate-700"
-            }`}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.webm,.wav,.mp3,.m4a"
-              onChange={(e) => {
-                handleFilesSelected(e.target.files);
-                e.target.value = "";
-              }}
-              disabled={isSubmitting}
-              className="hidden"
-            />
-            <UploadCloud className="h-10 w-10 text-indigo-400 mx-auto mb-2" />
-            <h3 className="text-xs font-bold text-white">
-              Drag & drop media files here, or click to browse
-            </h3>
-            <p className="text-[11px] text-slate-400 mt-1">
-              Supports JPEG, PNG, WebP images · MP4, MOV, WebM videos · WAV, MP3, M4A audio
-            </p>
-            <p className="text-[10px] text-slate-500 mt-2 font-mono">
-              Enforces 200 MB maximum file size & 5-minute video duration cap for CPU processing.
-            </p>
-          </div>
-
-          {/* Pending Files List */}
-          {pendingFiles.length > 0 && (
-            <div className="space-y-2 pt-2">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-                Selected Evidence Queue ({pendingFiles.length})
-              </span>
-              <div className="space-y-2">
-                {pendingFiles.map((item, idx) => {
-                  return (
-                    <div
-                      key={idx}
-                      className="rounded-lg border border-slate-800 bg-slate-950 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                    >
-                      <div className="flex items-center gap-3">
-                        {item.modality === "image" ? (
-                          <ImageIcon className="h-5 w-5 text-indigo-400 shrink-0" />
-                        ) : item.modality === "video" ? (
-                          <Film className="h-5 w-5 text-sky-400 shrink-0" />
-                        ) : item.modality === "audio" ? (
-                          <Music className="h-5 w-5 text-emerald-400 shrink-0" />
-                        ) : (
-                          <File className="h-5 w-5 text-slate-400 shrink-0" />
-                        )}
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-white">{item.file.name}</span>
-                            <span className="rounded bg-slate-800 px-1.5 py-0.2 text-[10px] text-slate-300 uppercase">
-                              {item.modality}
-                            </span>
+            {pendingFiles.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-400 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                No evidence files added yet. Drop files above or browse to stage them for cryptographic sealing.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2.5 max-h-[420px] overflow-y-auto pr-1">
+                {pendingFiles.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3.5 rounded-lg bg-slate-50 hover:bg-slate-100/80 border border-slate-200 transition-colors flex flex-col gap-2.5 text-xs"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded bg-white border border-slate-200 text-blue-600 flex items-center justify-center shrink-0">
+                          {item.modality === "image" ? (
+                            <ImageIcon className="h-4 w-4 text-blue-600" />
+                          ) : item.modality === "video" ? (
+                            <Film className="h-4 w-4 text-sky-600" />
+                          ) : item.modality === "audio" ? (
+                            <Music className="h-4 w-4 text-emerald-600" />
+                          ) : (
+                            <FileText className="h-4 w-4 text-slate-600" />
+                          )}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-semibold text-slate-900 truncate">{item.file.name}</span>
+                          <div className="flex items-center gap-2 text-slate-500 text-[11px]">
+                            <span>{formatBytes(item.file.size)}</span>
+                            <span>•</span>
+                            <span className="uppercase font-mono text-[10px]">{item.modality}</span>
                           </div>
-                          <span className="text-[10px] font-mono text-slate-500">
-                            {formatBytes(item.file.size)}
-                          </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <input
-                          type="text"
-                          placeholder="Source note (e.g. stage left phone)..."
-                          value={item.sourceNote}
-                          onChange={(e) => updateSourceNote(idx, e.target.value)}
-                          disabled={isSubmitting}
-                          className="flex-1 sm:w-48 bg-slate-900 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none"
-                        />
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[11px] font-semibold">
+                          <CheckCircle2 className="h-3 w-3 text-blue-600" />
+                          Staged
+                        </span>
                         <button
                           type="button"
                           onClick={() => removePendingFile(idx)}
                           disabled={isSubmitting}
-                          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-rose-400 transition-colors"
-                          title="Remove file"
+                          className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-white transition-colors"
+                          title="Remove asset"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
-                  );
-                })}
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Source note (e.g. stage left phone camera, WhatsApp forward)..."
+                        value={item.sourceNote}
+                        onChange={(e) => updateSourceNote(idx, e.target.value)}
+                        disabled={isSubmitting}
+                        className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          )}
-        </section>
+            )}
 
-        {/* Section 3: Caption & Context Claim Input */}
-        <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-6 space-y-4">
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-[10px] text-white">
-              3
-            </span>
-            <span>Social Media Caption & Narrative Claims</span>
-          </h2>
-
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Post Text or Public Claim
-              </label>
-              <textarea
-                placeholder="e.g. Record turnout: 3,000 attendees gathered at Main Plaza for Tech Fest 2026!"
-                rows={2}
-                value={captionText}
-                onChange={(e) => setCaptionText(e.target.value)}
-                disabled={isSubmitting}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">Claim Source:</span>
-              <select
-                value={captionSource}
-                onChange={(e) => setCaptionSource(e.target.value)}
-                disabled={isSubmitting}
-                className="bg-slate-950 border border-slate-700 text-slate-300 text-xs rounded px-2.5 py-1 focus:outline-none"
-              >
-                <option value="social_post">Social Media Post</option>
-                <option value="alt_text">Alt Text / Description</option>
-                <option value="press_release">Press Release</option>
-                <option value="user_input">User Provided Context</option>
-              </select>
-            </div>
-          </div>
-        </section>
-
-        {/* Action Button: Start Analysis */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-          <div className="text-xs text-slate-400 font-mono">
-            {isSubmitting && currentProgressStep && (
-              <span className="flex items-center gap-2 text-indigo-400">
-                <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-                <span>{currentProgressStep}</span>
+            <div className="pt-2 flex items-center justify-between text-slate-500 text-xs">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                <span>{pendingFiles.length} file(s) queued for ingestion</span>
               </span>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            disabled={isSubmitting || (pendingFiles.length === 0 && !captionText.trim())}
-            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-indigo-600/30 transition-all text-sm disabled:opacity-50"
-          >
-            {isSubmitting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Play className="h-4 w-4 fill-white" />
-            )}
-            <span>Start Analysis</span>
-          </button>
+              <span className="font-mono text-[11px]">Audit Engine Ready</span>
+            </div>
+          </section>
         </div>
       </form>
     </div>

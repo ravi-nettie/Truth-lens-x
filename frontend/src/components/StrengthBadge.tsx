@@ -8,28 +8,28 @@ interface StrengthBadgeProps {
 }
 
 export const StrengthBadge: React.FC<StrengthBadgeProps> = ({ strength, className = "" }) => {
-  const norm = strength.toLowerCase();
+  const norm = (strength || "").toLowerCase();
 
-  let styles = "bg-slate-800 text-slate-300 border-slate-700";
+  let styles = "bg-[#F1F5F9] text-[#475569] border-[#E2E8F0]";
   let label = "Informational";
 
   if (norm === "weak") {
-    styles = "bg-sky-950/80 text-sky-300 border-sky-700/60";
+    styles = "bg-[#EFF6FF] text-[#2563EB] border-[rgba(37,99,235,0.25)]";
     label = "Weak Evidence";
   } else if (norm === "moderate") {
-    styles = "bg-amber-950/80 text-amber-300 border-amber-600/70";
+    styles = "bg-[#FFF5E6] text-[#D97706] border-[rgba(217,119,6,0.25)]";
     label = "Moderate Evidence";
   } else if (norm === "strong") {
-    styles = "bg-rose-950/80 text-rose-300 border-rose-600/80";
+    styles = "bg-[#FDEBEC] text-[#DC2626] border-[rgba(220,38,38,0.25)]";
     label = "Strong Evidence";
   } else {
-    styles = "bg-slate-800 text-slate-300 border-slate-700";
+    styles = "bg-[#F1F5F9] text-[#475569] border-[#E2E8F0]";
     label = "Informational";
   }
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold tracking-wide uppercase ${styles} ${className}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-wide uppercase shadow-sm ${styles} ${className}`}
     >
       {label}
     </span>

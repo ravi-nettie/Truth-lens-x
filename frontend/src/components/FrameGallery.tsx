@@ -4,10 +4,6 @@ import {
   Maximize2,
   X,
   Play,
-  Layers,
-  AlertTriangle,
-  ChevronRight,
-  Sparkles,
 } from "lucide-react";
 
 export interface VideoFrameItem {
@@ -47,8 +43,8 @@ export const FrameGallery: React.FC<FrameGalleryProps> = ({
 
   if (frames.length === 0) {
     return (
-      <div className={`rounded-xl border border-dashed border-slate-800 bg-slate-900/40 p-8 text-center text-xs text-slate-500 ${className}`}>
-        <Film className="h-6 w-6 text-slate-600 mx-auto mb-2" />
+      <div className={`rounded border border-dashed border-outline-variant bg-surface-container-low p-8 text-center text-xs text-on-surface-variant ${className}`}>
+        <Film className="h-6 w-6 text-on-surface-variant/60 mx-auto mb-2" />
         No candidate sampled frames flagged in this video stream.
       </div>
     );
@@ -58,12 +54,12 @@ export const FrameGallery: React.FC<FrameGalleryProps> = ({
     <div className={`space-y-4 ${className}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Film className="h-4 w-4 text-indigo-400" />
-          <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+          <Film className="h-4 w-4 text-primary" />
+          <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">
             Sampled & Co-Flagged Video Frames ({frames.length})
           </h4>
         </div>
-        <span className="text-[11px] font-mono text-slate-400">
+        <span className="text-[11px] font-mono text-on-surface-variant">
           Sorted by Co-Flagged Anomaly Count
         </span>
       </div>
@@ -78,14 +74,14 @@ export const FrameGallery: React.FC<FrameGalleryProps> = ({
             <div
               key={frame.id}
               onClick={() => setSelectedLightboxFrame(frame)}
-              className={`group relative rounded-lg border transition-all cursor-pointer overflow-hidden bg-slate-950 flex flex-col justify-between ${
+              className={`group relative rounded border transition-all cursor-pointer overflow-hidden bg-white flex flex-col justify-between shadow-sm ${
                 isHighSuspicion
-                  ? "border-amber-600/70 hover:border-amber-500 hover:ring-2 hover:ring-amber-500/40"
-                  : "border-slate-800 hover:border-slate-700"
+                  ? "border-amber-400 hover:border-amber-500 hover:ring-2 hover:ring-amber-200"
+                  : "border-outline-variant hover:border-primary/40 hover:shadow"
               }`}
             >
               {/* Image Preview / Placeholder */}
-              <div className="relative aspect-video w-full bg-slate-900 flex items-center justify-center overflow-hidden">
+              <div className="relative aspect-video w-full bg-surface-container-low flex items-center justify-center overflow-hidden border-b border-outline-variant/60">
                 {frameImg ? (
                   <img
                     src={frameImg}
@@ -94,8 +90,8 @@ export const FrameGallery: React.FC<FrameGalleryProps> = ({
                   />
                 ) : (
                   <div className="flex flex-col items-center justify-center p-2 text-center">
-                    <Film className="h-6 w-6 text-slate-700 group-hover:text-indigo-400 transition-colors" />
-                    <span className="text-[10px] font-mono text-slate-500 mt-1">
+                    <Film className="h-6 w-6 text-on-surface-variant/40 group-hover:text-primary transition-colors" />
+                    <span className="text-[10px] font-mono text-on-surface-variant mt-1">
                       {frame.frame_index ? `Frame #${frame.frame_index}` : "Candidate Cut"}
                     </span>
                   </div>
@@ -103,23 +99,23 @@ export const FrameGallery: React.FC<FrameGalleryProps> = ({
 
                 {/* Co-Flagged Count Badge */}
                 {frame.co_flagged_count > 1 && (
-                  <span className="absolute top-1.5 right-1.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black px-1.5 py-0.2 shadow">
+                  <span className="absolute top-1.5 right-1.5 rounded-full bg-[#D97706] text-white text-[10px] font-bold px-2 py-0.5 shadow-sm">
                     {frame.co_flagged_count} Indicators
                   </span>
                 )}
 
                 {/* Hover overlay icon */}
-                <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                   <Maximize2 className="h-4 w-4 text-white" />
                 </div>
               </div>
 
               {/* Timestamp & Info Bar */}
-              <div className="p-2 space-y-1">
+              <div className="p-2.5 space-y-1 bg-white">
                 <div className="flex items-center justify-between text-[11px] font-mono">
-                  <span className="font-bold text-white">PTS {formatPts(frame.pts_time_ms)}</span>
+                  <span className="font-bold text-on-surface">PTS {formatPts(frame.pts_time_ms)}</span>
                   {frame.frame_index && (
-                    <span className="text-slate-500 text-[10px]">#{frame.frame_index}</span>
+                    <span className="text-on-surface-variant text-[10px]">#{frame.frame_index}</span>
                   )}
                 </div>
 
@@ -128,7 +124,7 @@ export const FrameGallery: React.FC<FrameGalleryProps> = ({
                   {frame.indicators.map((ind, i) => (
                     <span
                       key={i}
-                      className="text-[9px] font-mono rounded bg-slate-900 border border-slate-800 px-1 py-0.2 text-slate-400 truncate max-w-[120px]"
+                      className="text-[9px] font-mono rounded bg-surface-container-low border border-outline-variant px-1.5 py-0.5 text-on-surface-variant truncate max-w-[120px]"
                     >
                       {ind}
                     </span>
@@ -142,15 +138,15 @@ export const FrameGallery: React.FC<FrameGalleryProps> = ({
 
       {/* Clickable Lightbox Modal */}
       {selectedLightboxFrame && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-fadeIn">
-          <div className="relative w-full max-w-3xl rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-3xl rounded-lg border border-outline-variant bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-outline-variant pb-3">
               <div>
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Film className="h-4 w-4 text-indigo-400" />
+                <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
+                  <Film className="h-4 w-4 text-primary" />
                   <span>Frame Lightbox: PTS {formatPts(selectedLightboxFrame.pts_time_ms)}</span>
                   {selectedLightboxFrame.frame_index && (
-                    <span className="font-mono text-xs text-slate-400">
+                    <span className="font-mono text-xs text-on-surface-variant">
                       (Frame #{selectedLightboxFrame.frame_index})
                     </span>
                   )}
@@ -159,14 +155,14 @@ export const FrameGallery: React.FC<FrameGalleryProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedLightboxFrame(null)}
-                className="rounded-lg p-1 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                className="rounded p-1 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Large Image Preview */}
-            <div className="relative aspect-video w-full rounded-xl bg-black border border-slate-800 flex items-center justify-center overflow-hidden">
+            <div className="relative aspect-video w-full rounded bg-black border border-outline-variant flex items-center justify-center overflow-hidden">
               {selectedLightboxFrame.image_url || selectedLightboxFrame.artifact_id ? (
                 <img
                   src={
@@ -178,7 +174,7 @@ export const FrameGallery: React.FC<FrameGalleryProps> = ({
                 />
               ) : (
                 <div className="text-center p-8 space-y-2">
-                  <Film className="h-12 w-12 text-slate-700 mx-auto" />
+                  <Film className="h-12 w-12 text-slate-500 mx-auto" />
                   <p className="text-xs font-mono text-slate-400">
                     Candidate cut point at PTS {formatPts(selectedLightboxFrame.pts_time_ms)}
                   </p>
@@ -188,15 +184,15 @@ export const FrameGallery: React.FC<FrameGalleryProps> = ({
 
             {/* Frame Metadata & Details */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
-              <div className="space-y-1.5 rounded-lg border border-slate-800 bg-slate-950 p-3">
-                <span className="text-[10px] text-slate-500 uppercase font-bold block">
+              <div className="space-y-1.5 rounded border border-outline-variant bg-surface-container-low p-3">
+                <span className="text-[10px] text-on-surface-variant uppercase font-bold block">
                   Flagged Forensic Indicators ({selectedLightboxFrame.indicators.length})
                 </span>
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {selectedLightboxFrame.indicators.map((ind, i) => (
                     <span
                       key={i}
-                      className="rounded bg-indigo-950/70 border border-indigo-800 px-2 py-0.5 text-indigo-300 text-[10px]"
+                      className="rounded bg-[#EFF6FF] border border-blue-200 px-2 py-0.5 text-primary text-[10px]"
                     >
                       {ind}
                     </span>
@@ -204,12 +200,12 @@ export const FrameGallery: React.FC<FrameGalleryProps> = ({
                 </div>
               </div>
 
-              <div className="space-y-1.5 rounded-lg border border-slate-800 bg-slate-950 p-3 flex flex-col justify-between">
+              <div className="space-y-1.5 rounded border border-outline-variant bg-surface-container-low p-3 flex flex-col justify-between">
                 <div>
-                  <span className="text-[10px] text-slate-500 uppercase font-bold block">
+                  <span className="text-[10px] text-on-surface-variant uppercase font-bold block">
                     Anomaly Context
                   </span>
-                  <p className="text-slate-300 text-[11px] mt-1 font-sans">
+                  <p className="text-on-surface text-[11px] mt-1 font-sans">
                     {selectedLightboxFrame.summary ||
                       "Identified candidate cut / PTS boundary during automated video analysis."}
                   </p>
@@ -222,7 +218,7 @@ export const FrameGallery: React.FC<FrameGalleryProps> = ({
                       onSeek(selectedLightboxFrame.pts_time_ms);
                       setSelectedLightboxFrame(null);
                     }}
-                    className="flex items-center justify-center gap-1.5 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-1.5 px-3 rounded-lg text-xs transition-colors mt-2"
+                    className="flex items-center justify-center gap-1.5 w-full bg-primary hover:bg-blue-700 text-white font-semibold py-1.5 px-3 rounded text-xs transition-colors mt-2 shadow-sm"
                   >
                     <Play className="h-3.5 w-3.5 fill-white" />
                     <span>Seek Player to This Frame</span>

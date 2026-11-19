@@ -2,21 +2,15 @@ import React, { useState, useEffect } from "react";
 import {
   Clock,
   ShieldCheck,
-  ShieldAlert,
   Upload,
   Camera,
   Play,
   CheckCircle2,
-  Filter,
   FileCheck2,
-  RefreshCw,
   Hash,
-  AlertTriangle,
   RotateCw,
   Loader2,
   Lock,
-  Layers,
-  Sparkles,
 } from "lucide-react";
 import { api, SchemaTimelineEvent, SchemaEvidenceResponse } from "../api/client";
 
@@ -154,49 +148,49 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     const k = kind.toLowerCase();
     if (k === "upload") {
       return {
-        icon: <Upload className="h-3.5 w-3.5 text-cyan-400" />,
-        color: "border-cyan-800/80 bg-cyan-950/60 text-cyan-300",
+        icon: <Upload className="h-3.5 w-3.5 text-blue-600" />,
+        color: "border-blue-200 bg-[#EFF6FF] text-primary",
         label: "Evidence Upload",
       };
     }
     if (k === "metadata" || k === "exif_timestamp") {
       return {
-        icon: <Camera className="h-3.5 w-3.5 text-amber-400" />,
-        color: "border-amber-800/80 bg-amber-950/60 text-amber-300",
+        icon: <Camera className="h-3.5 w-3.5 text-[#D97706]" />,
+        color: "border-amber-200 bg-[#FFF5E6] text-[#D97706]",
         label: "Capture Metadata",
       };
     }
     if (k === "analysis_run") {
       return {
-        icon: <Play className="h-3.5 w-3.5 text-indigo-400" />,
-        color: "border-indigo-800/80 bg-indigo-950/60 text-indigo-300",
+        icon: <Play className="h-3.5 w-3.5 text-indigo-600" />,
+        color: "border-indigo-200 bg-indigo-50 text-indigo-700",
         label: "Analyzer Run",
       };
     }
     if (k === "observation" || k === "media_observation") {
       return {
-        icon: <Clock className="h-3.5 w-3.5 text-purple-400" />,
-        color: "border-purple-800/80 bg-purple-950/60 text-purple-300",
+        icon: <Clock className="h-3.5 w-3.5 text-purple-600" />,
+        color: "border-purple-200 bg-purple-50 text-purple-700",
         label: "Media Observation",
       };
     }
     if (k === "review" || k === "review_decision") {
       return {
-        icon: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />,
-        color: "border-emerald-800/80 bg-emerald-950/60 text-emerald-300",
+        icon: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />,
+        color: "border-emerald-200 bg-emerald-50 text-emerald-700",
         label: "Analyst Review",
       };
     }
     if (k === "hash_verify" || k === "verify_hash") {
       return {
-        icon: <Hash className="h-3.5 w-3.5 text-sky-400" />,
-        color: "border-sky-800/80 bg-sky-950/60 text-sky-300",
+        icon: <Hash className="h-3.5 w-3.5 text-blue-600" />,
+        color: "border-blue-200 bg-[#EFF6FF] text-primary",
         label: "Hash Verification",
       };
     }
     return {
-      icon: <Clock className="h-3.5 w-3.5 text-slate-400" />,
-      color: "border-slate-800 bg-slate-900 text-slate-300",
+      icon: <Clock className="h-3.5 w-3.5 text-on-surface-variant" />,
+      color: "border-outline-variant bg-surface-container-low text-on-surface",
       label: kind,
     };
   };
@@ -204,32 +198,34 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Explicit Mandatory Header Note */}
-      <div className="rounded-xl border border-indigo-900/60 bg-indigo-950/30 p-4 space-y-1.5 text-xs">
+      <div className="rounded border border-blue-200 bg-[#EFF6FF] p-4 space-y-1.5 text-xs shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-indigo-300 font-bold uppercase tracking-wider text-[11px]">
-            <ShieldCheck className="h-4 w-4 text-indigo-400" />
+          <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-wider text-[11px]">
+            <ShieldCheck className="h-4 w-4 text-primary" />
             <span>Forensic Provenance Notice</span>
           </div>
-          <span className="font-mono text-[10px] text-slate-500">Local-First · Rule 2 & 3</span>
+          <span className="font-mono text-[10px] text-on-surface-variant">Local-First · Rule 2 & 3</span>
         </div>
-        <p className="text-slate-200 text-sm font-semibold tracking-tight">
+        <p className="text-on-surface text-sm font-bold tracking-tight">
           "Provenance-aware audit trail — not legal chain of custody."
         </p>
-        <p className="text-slate-400 text-xs leading-relaxed">
+        <p className="text-on-surface-variant text-xs leading-relaxed">
           This chronological timeline records technical provenance events across file ingestion, EXIF hardware headers, container timestamps, automated analysis runs, and append-only reviewer determinations. It does not replace sworn legal custodial attestations.
         </p>
       </div>
 
       {/* Evidence Cryptographic Integrity & Re-Verify All Button */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
-          <div className="flex items-center gap-2">
-            <FileCheck2 className="h-5 w-5 text-indigo-400" />
+      <div className="rounded border border-outline-variant bg-white p-5 space-y-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded bg-primary-container text-white flex items-center justify-center shadow-sm">
+              <FileCheck2 className="h-4 w-4" />
+            </div>
             <div>
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+              <h3 className="text-xs font-bold text-on-surface uppercase tracking-wider">
                 Cryptographic Evidence Integrity (SHA-256)
               </h3>
-              <span className="text-[10px] font-mono text-slate-400">
+              <span className="text-[10px] font-mono text-on-surface-variant">
                 Mode 0444 Immutable Evidence Store
               </span>
             </div>
@@ -239,37 +235,37 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
             {/* Audit Chain Badge */}
             {auditStatus && (
               <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold border ${
                   auditStatus.valid
-                    ? "border-emerald-600/70 bg-emerald-950/70 text-emerald-300"
-                    : "border-rose-600/70 bg-rose-950/70 text-rose-300"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-rose-200 bg-rose-50 text-rose-700"
                 }`}
               >
                 {auditStatus.valid ? (
                   <>
-                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-                    Audit Trail Verified ({auditStatus.count} chained records)
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>Audit Chain Valid ({auditStatus.count} entries)</span>
                   </>
                 ) : (
                   <>
-                    <ShieldAlert className="h-3.5 w-3.5 text-rose-400" />
-                    Audit Chain Inconsistency
+                    <Lock className="h-3.5 w-3.5 text-rose-600" />
+                    <span>Audit Chain Alert ({auditStatus.errors.length} errors)</span>
                   </>
                 )}
               </span>
             )}
 
-            {/* One-Click "Re-Verify All Evidence Hashes" Button */}
+            {/* Re-verify All Hashes Button */}
             <button
               type="button"
               onClick={handleReverifyAllHashes}
               disabled={isVerifyingAll || evidenceItems.length === 0}
-              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-1.5 rounded-lg text-xs shadow transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 bg-primary hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded transition-all shadow-sm disabled:opacity-50"
             >
               {isVerifyingAll ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <RotateCw className="h-3.5 w-3.5 text-white" />
+                <RotateCw className="h-3.5 w-3.5" />
               )}
               <span>Re-Verify All Evidence Hashes</span>
             </button>
@@ -277,140 +273,142 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         </div>
 
         {verifyAllFeedback && (
-          <div className="rounded-lg border border-emerald-800 bg-emerald-950/40 p-2.5 text-xs text-emerald-300 flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+          <div className="rounded border border-emerald-200 bg-emerald-50 p-2.5 text-xs text-emerald-800 flex items-center gap-2 font-medium">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
             <span>{verifyAllFeedback}</span>
           </div>
         )}
 
-        {/* Evidence Grid with individual hash statuses */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {evidenceItems.map((ev) => {
-            const res = hashResults[ev.id];
-            const isVerifying = verifyingHashId === ev.id;
-            return (
-              <div
-                key={ev.id}
-                className="rounded-lg border border-slate-800 bg-slate-950 p-3 flex flex-col justify-between gap-2 text-xs"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-bold text-white truncate max-w-[240px]">
+        {/* Evidence Hash Quick Table */}
+        <div className="overflow-x-auto rounded border border-outline-variant">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-outline-variant bg-surface-container-low text-on-surface-variant font-mono text-[10px] uppercase">
+                <th className="py-2 px-3 font-semibold">Evidence File</th>
+                <th className="py-2 px-3 font-semibold">Modality</th>
+                <th className="py-2 px-3 font-semibold">SHA-256 Digest</th>
+                <th className="py-2 px-3 font-semibold text-right">Verification</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-outline-variant/60 font-mono text-xs">
+              {evidenceItems.map((ev) => {
+                const res = hashResults[ev.id];
+                return (
+                  <tr key={ev.id} className="hover:bg-surface-container-low transition-colors">
+                    <td className="py-2 px-3 font-sans font-semibold text-on-surface">
                       {ev.filename}
-                    </span>
-                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                    </td>
+                    <td className="py-2 px-3 text-on-surface-variant uppercase text-[10px]">
                       {ev.modality}
-                    </span>
-                  </div>
-                  <div className="mt-1 flex items-center gap-1 font-mono text-[10px] text-slate-400 break-all">
-                    <Hash className="h-3 w-3 shrink-0 text-indigo-400" />
-                    <span>{ev.sha256}</span>
-                  </div>
-                </div>
+                    </td>
+                    <td className="py-2 px-3 text-primary text-[11px] truncate max-w-xs" title={ev.sha256}>
+                      {ev.sha256}
+                    </td>
+                    <td className="py-2 px-3 text-right">
+                      {res ? (
+                        <span
+                          className={`inline-flex items-center gap-1 font-bold text-[11px] ${
+                            res.match ? "text-emerald-700" : "text-rose-700"
+                          }`}
+                        >
+                          {res.match ? "MATCH VERIFIED" : "HASH MISMATCH"}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleVerifyHash(ev.id)}
+                          disabled={verifyingHashId === ev.id}
+                          className="text-primary hover:text-blue-800 font-semibold text-[11px]"
+                        >
+                          {verifyingHashId === ev.id ? "Verifying..." : "Verify Hash"}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
-                  {res ? (
-                    res.match ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded">
-                        <CheckCircle2 className="h-3 w-3" /> PASS: SHA-256 Match
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-400 bg-rose-950/60 border border-rose-800 px-2 py-0.5 rounded">
-                        <AlertTriangle className="h-3 w-3" /> FAIL: Hash Mismatch
-                      </span>
-                    )
-                  ) : (
-                    <span className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
-                      <Lock className="h-2.5 w-2.5" /> mode 0444 read-only
-                    </span>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => handleVerifyHash(ev.id)}
-                    disabled={isVerifying || isVerifyingAll}
-                    className="flex items-center gap-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold px-2.5 py-1 rounded border border-slate-700 transition-colors disabled:opacity-50"
-                  >
-                    <RefreshCw className={`h-3 w-3 ${isVerifying ? "animate-spin text-indigo-400" : ""}`} />
-                    <span>{isVerifying ? "Verifying..." : "Verify"}</span>
-                  </button>
-                </div>
-              </div>
+      {/* Filter Chips Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded border border-outline-variant shadow-sm">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider mr-1">
+            Filter:
+          </span>
+          {filterChips.map((chip) => {
+            const isActive = activeFilter === chip.id;
+            return (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => setActiveFilter(chip.id)}
+                className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
+                  isActive
+                    ? "bg-primary-container text-white shadow-sm"
+                    : "bg-surface-container-low text-on-surface border border-outline-variant hover:bg-surface-container"
+                }`}
+              >
+                {chip.label}
+              </button>
             );
           })}
         </div>
-      </div>
 
-      {/* Filter Chips by Event Kind */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-slate-400 flex items-center gap-1 mr-1">
-          <Filter className="h-3.5 w-3.5" /> Filter Events:
+        <span className="text-xs font-mono text-on-surface-variant">
+          Showing {filteredEvents.length} of {events.length} events
         </span>
-        {filterChips.map((chip) => (
-          <button
-            key={chip.id}
-            type="button"
-            onClick={() => setActiveFilter(chip.id)}
-            className={`px-3 py-1 rounded-full text-xs font-mono font-semibold transition-all ${
-              activeFilter === chip.id
-                ? "bg-indigo-600 text-white shadow-sm"
-                : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700"
-            }`}
-          >
-            {chip.label}
-          </button>
-        ))}
       </div>
 
-      {/* Chronological Vertical Timeline Stream */}
-      {filteredEvents.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/30 p-12 text-center text-xs text-slate-500">
-          No events match the selected "{activeFilter}" filter.
-        </div>
-      ) : (
-        <div className="relative border-l-2 border-slate-800 ml-4 pl-6 space-y-6 my-4">
-          {filteredEvents.map((evt, idx) => {
-            const badge = getEventBadge(evt.kind);
-            return (
-              <div key={evt.id || idx} className="relative group">
-                {/* Timeline node pip */}
-                <div className="absolute -left-[31px] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-indigo-500 bg-slate-950 group-hover:scale-125 transition-transform ring-4 ring-slate-950" />
+      {/* Vertical Provenance Timeline */}
+      <div className="relative pl-6 sm:pl-8 border-l-2 border-outline-variant space-y-6">
+        {filteredEvents.map((evt) => {
+          const badge = getEventBadge(evt.kind);
 
-                <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 space-y-2 hover:border-slate-700 hover:bg-slate-900 transition-all">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+          return (
+            <div key={evt.id} className="relative group">
+              {/* Timeline Node Dot */}
+              <div className="absolute -left-[31px] sm:-left-[39px] top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white border-2 border-primary shadow-sm">
+                <span className="h-2 w-2 rounded-full bg-primary" />
+              </div>
+
+              {/* Event Card */}
+              <div className="rounded border border-outline-variant bg-white p-4 shadow-sm hover:border-primary/50 transition-all space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
                     <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${badge.color}`}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border uppercase tracking-wider ${badge.color}`}
                     >
                       {badge.icon}
                       {badge.label}
                     </span>
-                    <span className="font-mono text-slate-400 text-xs">
-                      {evt.ts
-                        ? new Date(evt.ts).toLocaleString()
-                        : evt.media_time_ms !== null && evt.media_time_ms !== undefined
-                        ? `Media Offset: ${evt.media_time_ms} ms`
-                        : "Genesis"}
+                    <span className="font-mono text-xs font-bold text-on-surface">
+                      {evt.label}
                     </span>
                   </div>
 
-                  <p className="text-xs text-slate-100 font-medium leading-relaxed">
-                    {evt.label}
-                  </p>
-
-                  <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-500 pt-2 border-t border-slate-800/60">
-                    <span>Reference: {evt.ref_id}</span>
+                  <div className="flex items-center gap-2 text-[11px] font-mono text-on-surface-variant">
+                    {evt.ts && <span>{new Date(evt.ts).toLocaleString()}</span>}
                     {evt.media_time_ms !== null && evt.media_time_ms !== undefined && (
-                      <span className="text-purple-400 font-semibold">
+                      <span className="bg-surface-container-low border border-outline-variant px-1.5 py-0.5 rounded font-semibold text-primary">
                         Media Time: {evt.media_time_ms} ms
                       </span>
                     )}
                   </div>
                 </div>
+
+                {evt.ref_id && (
+                  <p className="text-xs font-mono text-on-surface-variant">
+                    Reference Target: <span className="text-primary font-semibold">{evt.ref_id}</span>
+                  </p>
+                )}
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
