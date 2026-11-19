@@ -28,7 +28,12 @@ def safe_text(val: Any) -> str:
         s = json.dumps(val, ensure_ascii=False)
     else:
         s = str(val)
-    return xml.sax.saxutils.escape(s)
+    # Common typography replacements for standard PDF fonts (Helvetica)
+    s = s.replace("\u201c", '"').replace("\u201d", '"').replace("\u2018", "'").replace("\u2019", "'")
+    s = s.replace("\u2014", " - ").replace("\u2013", "-").replace("\u2026", "...").replace("\u00a0", " ")
+    escaped = xml.sax.saxutils.escape(s)
+    # Ensure safe character encoding for standard Latin-1 PDF canvas
+    return escaped.encode("latin-1", "replace").decode("latin-1")
 
 
 class NumberedCanvas(canvas.Canvas):

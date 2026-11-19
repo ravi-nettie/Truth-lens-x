@@ -252,9 +252,12 @@ def build_report_json(case_id: str, report_id: Optional[str] = None) -> Dict[str
                 "finished_at": r.get("finished_at") or ""
             })
 
-        # 4. Fetch Observations
+        # 4. Fetch Observations & Artifacts
         cursor.execute("SELECT * FROM observations WHERE case_id = ?", (case_id,))
         obs_rows = [dict(r) for r in cursor.fetchall()]
+
+        cursor.execute("SELECT * FROM artifacts WHERE case_id = ?", (case_id,))
+        artifacts_rows = [dict(r) for r in cursor.fetchall()]
 
         # 5. Fetch Review Decisions
         cursor.execute("SELECT * FROM review_decisions WHERE case_id = ? ORDER BY decided_at ASC", (case_id,))
@@ -295,22 +298,30 @@ def build_report_json(case_id: str, report_id: Optional[str] = None) -> Dict[str
                 "strength": edge["strength"]
             })
 
-        # 8. Fetch Timeline Events
+        # 8. Fetch Timeline Events & Map Original Names
         cursor.execute(
             "SELECT * FROM timeline_events WHERE case_id = ? ORDER BY ts ASC, id ASC",
             (case_id,)
         )
         timeline_rows = [dict(r) for r in cursor.fetchall()]
 
+        ev_name_lookup = {ev["id"]: ev.get("original_name") for ev in evidence_rows}
+
         timeline = []
         for te in timeline_rows:
+            ref_id = te.get("ref_id")
+            orig_n = ev_name_lookup.get(ref_id)
+            lbl = te.get("label", "")
+            if orig_n and orig_n not in lbl:
+                lbl = f"{lbl} (File: {orig_n})"
             timeline.append({
                 "id": te["id"],
                 "ts": te.get("ts") or "",
                 "media_time_ms": te.get("media_time_ms"),
                 "kind": te["kind"],
-                "ref_id": te["ref_id"],
-                "label": te["label"]
+                "ref_id": ref_id,
+                "original_name": orig_n,
+                "label": lbl
             })
 
         # 9. Format Findings (sorted by strength: strong -> moderate -> weak -> informational)
@@ -377,6 +388,20 @@ def build_report_json(case_id: str, report_id: Optional[str] = None) -> Dict[str
                 else None
             )
 
+            art_ids = []
+            if o.get("artifact_ids_json"):
+                try:
+                    art_ids = json.loads(o["artifact_ids_json"])
+                except Exception:
+                    art_ids = [o["artifact_ids_json"]]
+
+            det_obj = {}
+            if o.get("details_json"):
+                try:
+                    det_obj = json.loads(o["details_json"])
+                except Exception:
+                    det_obj = {"raw": o["details_json"]}
+
             findings.append({
                 "id": obs_id,
                 "evidence_id": o["evidence_id"],
@@ -393,41 +418,168 @@ def build_report_json(case_id: str, report_id: Optional[str] = None) -> Dict[str
                 "model_score_display": model_score_display,
                 "model_calibrated": bool(o.get("model_calibrated", 0)),
                 "model_name": o.get("model_name"),
+                "artifact_ids": art_ids,
+                "details": det_obj,
                 "limitations": o.get("limitations") or "",
                 "human_review_status": rev_status,
                 "latest_reviewer_note": rev_note,
                 "latest_reviewer": reviewer
             })
 
-        # 10. Compute Case Summary & Priority
+        # 10. Analyzer Coverage Matrix & Audit
+        # Map expected analyzers based on evidence kinds in this case
+        active_modalities = set(ev["kind"].lower() for ev in evidence_rows)
+        expected_analyzers: List[Dict[str, str]] = []
+        for ev in evidence_rows:
+            k = ev["kind"].lower()
+            ev_id = ev["id"]
+            if k in ("image", "photo"):
+                expected_analyzers.append({"evidence_id": ev_id, "analyzer": "image_forensics", "modality": "image"})
+                if settings.ENABLE_AI_ORIGIN_CLASSIFIER:
+                    expected_analyzers.append({"evidence_id": ev_id, "analyzer": "ai_origin", "modality": "image"})
+            elif k in ("video", "clip"):
+                expected_analyzers.append({"evidence_id": ev_id, "analyzer": "video_analysis", "modality": "video"})
+            elif k in ("audio", "recording"):
+                expected_analyzers.append({"evidence_id": ev_id, "analyzer": "audio_analysis", "modality": "audio"})
+            elif k in ("text", "caption"):
+                expected_analyzers.append({"evidence_id": ev_id, "analyzer": "text_analysis", "modality": "text"})
+
+        # Cross-reference with executed analysis runs
+        run_lookup = {}
+        for r in methods_used:
+            key = (r["evidence_id"], r["analyzer"])
+            run_lookup[key] = r
+
+        coverage_items = []
+        skipped_or_failed = []
+        completed_count = 0
+
+        for exp in expected_analyzers:
+            match = run_lookup.get((exp["evidence_id"], exp["analyzer"]))
+            if match:
+                st = match["status"]
+                err = match["error"]
+                if st == "done":
+                    completed_count += 1
+                    status_label = "COMPLETED"
+                elif "skipped" in st:
+                    status_label = f"SKIPPED ({err or 'Missing Model/Config'})"
+                    skipped_or_failed.append({"analyzer": exp["analyzer"], "evidence_id": exp["evidence_id"], "reason": err or "Skipped"})
+                else:
+                    status_label = f"FAILED ({err or 'Execution error'})"
+                    skipped_or_failed.append({"analyzer": exp["analyzer"], "evidence_id": exp["evidence_id"], "reason": err or "Failed"})
+            else:
+                status_label = "NOT_EXECUTED"
+                skipped_or_failed.append({"analyzer": exp["analyzer"], "evidence_id": exp["evidence_id"], "reason": "Not executed"})
+
+            coverage_items.append({
+                "evidence_id": exp["evidence_id"],
+                "analyzer": exp["analyzer"],
+                "modality": exp["modality"],
+                "status": status_label
+            })
+
+        total_expected = len(expected_analyzers)
+        coverage_pct = round((completed_count / max(1, total_expected)) * 100.0, 1) if total_expected > 0 else 100.0
+        coverage_complete = (len(skipped_or_failed) == 0)
+
+        analyzer_coverage = {
+            "total_expected": total_expected,
+            "completed": completed_count,
+            "skipped_or_failed_count": len(skipped_or_failed),
+            "coverage_percentage": coverage_pct,
+            "coverage_complete": coverage_complete,
+            "skipped_or_failed_modules": skipped_or_failed,
+            "items": coverage_items
+        }
+
+        # 11. AI-Origin Classifier Status & Model Provenance
+        ai_obs = [o for o in obs_rows if o.get("indicator") == "ai_origin_classification"]
+        ai_runs = [r for r in methods_used if r.get("analyzer") in ("ai_origin", "ai_origin_detector")]
+        weights_exist = (settings.ai_image_detector_dir / "model.safetensors").exists() or (settings.ai_image_detector_dir / "pytorch_model.bin").exists()
+
+        if "image" not in active_modalities and "photo" not in active_modalities:
+            ai_status = "NOT_APPLICABLE"
+            ai_desc = "No image evidence registered in case."
+        elif not settings.ENABLE_AI_ORIGIN_CLASSIFIER:
+            ai_status = "DISABLED"
+            ai_desc = "AI-origin classifier disabled in configuration (ENABLE_AI_ORIGIN_CLASSIFIER=false)."
+        elif not weights_exist and not ai_runs:
+            ai_status = "SKIPPED_MISSING_MODEL"
+            ai_desc = "Local model weights not found in models/ai_image_detector/."
+        elif ai_runs and any(r.get("status") == "skipped_missing_model" for r in ai_runs):
+            ai_status = "SKIPPED_MISSING_MODEL"
+            ai_desc = "AI-origin classifier skipped: offline weights not present locally."
+        elif ai_runs and any(r.get("status") == "done" for r in ai_runs):
+            ai_status = "LOADED_AND_EXECUTED"
+            ai_desc = "Pretrained classifier loaded from local weights and executed offline on CPU."
+        else:
+            ai_status = "READY"
+            ai_desc = "Weights present; awaiting execution."
+
+        ai_origin_provenance = {
+            "status": ai_status,
+            "description": ai_desc,
+            "model_id": settings.AI_IMAGE_MODEL_ID,
+            "model_weights_path": str(settings.ai_image_detector_dir),
+            "model_calibrated": False,
+            "calibration_disclaimer": (
+                "UNCALIBRATED DEEP LEARNING CLASSIFIER OUTPUT: Softmax probability scores reflect raw model logits "
+                "from synthetic training distributions (SDXL/Diffusion). Scores are NOT calibrated against real-world "
+                "sensor noise or social media recompression. Must NEVER be cited as standalone forensic proof of AI origin."
+            ),
+            "observations_count": len(ai_obs)
+        }
+
+        # 12. Compute Case Summary & Priority
+        # Forensic Rule: Prevent LOW review priority from implying successful verification when required analyzers did not run!
         contradiction_count = sum(1 for e in cross_modal_relationships if e["relation"] == "CONTRADICTS")
         if strength_counts["strong"] >= 1 or (strength_counts["moderate"] >= 2 and contradiction_count >= 1):
             review_priority = "high"
+            priority_label = "HIGH PRIORITY (Strong Forensic Indicators Present)"
+            coverage_warning = ""
         elif strength_counts["moderate"] >= 1 or contradiction_count >= 1:
             review_priority = "medium"
+            priority_label = "MEDIUM PRIORITY (Moderate Indicators or Contradictions Present)"
+            coverage_warning = ""
+        elif not coverage_complete:
+            # Crucial: Incomplete analyzer coverage cannot default to LOW!
+            review_priority = "medium"
+            priority_label = f"MEDIUM PRIORITY (INCOMPLETE COVERAGE — {len(skipped_or_failed)} module(s) skipped/failed)"
+            coverage_warning = (
+                f"WARNING: Low risk cannot be inferred. {len(skipped_or_failed)} expected analyzer module(s) were "
+                f"skipped or failed ({', '.join(m['analyzer'] for m in skipped_or_failed)}). "
+                f"Potential manipulations in unanalyzed modalities remain unassessed."
+            )
         else:
             review_priority = "low"
+            priority_label = "LOW PRIORITY (No suspicious indicators detected across full analyzer suite)"
+            coverage_warning = ""
 
         case_summary = {
             "review_priority": review_priority,
-            "review_priority_label": "review_priority (not a fake probability)",
+            "review_priority_label": priority_label,
             "review_priority_formula": FORMULA_EXPLANATION,
+            "coverage_warning": coverage_warning,
             "strength_counts": strength_counts,
             "review_status_counts": review_status_counts,
             "total_findings": len(findings),
-            "unreviewed_count": review_status_counts["unreviewed"]
+            "unreviewed_count": review_status_counts["unreviewed"],
+            "analyzer_coverage": analyzer_coverage,
+            "ai_origin_status": ai_origin_provenance
         }
 
-        # 11. Media Metadata
+        # 13. Media Metadata
         media_metadata = [_extract_media_metadata(ev, obs_rows) for ev in evidence_rows]
 
-        # 12. Limitations & Alternative Explanations
+        # 14. Limitations & Alternative Explanations
         limitations_and_alternatives = {
             "per_modality_risks": {
                 "image": (
                     "Image compression artifacts, social media re-compression, Error Level Analysis (ELA) "
                     "contrast boundary noise, and natural repetitive patterns (foliage, architectural windows) "
-                    "routinely cause false-positive detections. Missing EXIF metadata is standard across messaging platforms."
+                    "routinely cause false-positive detections. ELA is strictly non-applicable to PNG/lossless formats. "
+                    "Missing EXIF metadata is standard across messaging platforms."
                 ),
                 "video": (
                     "Video inter-frame temporal compression (GOP boundaries, P/B macroblock artifacts), variable frame "
@@ -452,16 +604,58 @@ def build_report_json(case_id: str, report_id: Optional[str] = None) -> Dict[str
             }
         }
 
-        # 13. Recommendations for Human Review
-        human_review_recommendations = [
-            "Listen carefully to flagged audio timestamps around detected spectral discontinuities and speech boundaries.",
-            "Inspect original high-resolution keyframes adjacent to detected scene cuts and copy-move spatial clusters.",
-            "Verify the claimed local timezone and daylight illumination against solar azimuth and geographic landmarks.",
-            "Cross-reference transcribed quantities and numerical claims against authoritative public registries or aerial records.",
-            "Request primary camera raw container files (.CR2, .NEF, .WAV, uncompressed MP4) to eliminate transcoding artifacts."
-        ]
+        # 15. Dynamic Recommendations for Human Review (Tailored to actual analyzed modalities and findings)
+        recs = []
+        if "image" in active_modalities or "photo" in active_modalities:
+            cm_obs = [f for f in findings if f.get("indicator") == "copy_move_duplication"]
+            if cm_obs:
+                recs.append(
+                    "Inspect copy-move visual overlay artifact and verify Cluster A vs Cluster B coordinates in "
+                    "uncompressed original to eliminate repetitive architectural/physical textures."
+                )
+            ela_non_jpeg = [f for f in findings if "Non-JPEG" in f.get("summary", "")]
+            if ela_non_jpeg:
+                recs.append(
+                    "Note that ELA is non-applicable on PNG/lossless containers; request original camera capture (.CR2/JPEG) if available."
+                )
+            exif_ed = [f for f in findings if f.get("indicator") == "exif_editor_detected"]
+            if exif_ed:
+                recs.append(
+                    "Examine EXIF software editing tag and modification timestamp against the claimed event chronology."
+                )
+            if ai_obs:
+                recs.append(
+                    "Verify AI-origin classification score against high-magnification sensor noise, edge coherency, and photorealistic rendering consistency."
+                )
 
-        # 14. Audit Excerpt & Verification
+        if "video" in active_modalities or "clip" in active_modalities:
+            recs.append(
+                "Inspect high-resolution video keyframes around detected scene cut timestamps for visual and lighting continuity."
+            )
+
+        if "audio" in active_modalities or "recording" in active_modalities:
+            recs.append(
+                "Listen with professional monitoring headphones at flagged audio timestamps around detected spectral discontinuities."
+            )
+
+        if "text" in active_modalities or "caption" in active_modalities:
+            recs.append(
+                "Cross-reference transcribed quantities, dates, and numerical claims against authoritative public registries or aerial records."
+            )
+
+        if not coverage_complete:
+            recs.append(
+                f"Resolve analyzer coverage gaps: download missing model weights or re-run skipped analyzers "
+                f"({', '.join(m['analyzer'] for m in skipped_or_failed)}) before making final determinations."
+            )
+
+        recs.append(
+            "Request primary camera raw container files (.CR2, .NEF, .WAV, uncompressed MP4) whenever possible to eliminate transcoding artifacts."
+        )
+
+        human_review_recommendations = recs
+
+        # 16. Audit Excerpt & Verification (Clearly labeled as internal audit log integrity only)
         audit_res = verify_audit_chain(case_id, conn=conn)
 
         cursor.execute(
@@ -471,13 +665,18 @@ def build_report_json(case_id: str, report_id: Optional[str] = None) -> Dict[str
         audit_rows = [dict(r) for r in cursor.fetchall()]
 
         audit_excerpt = {
-            "audit_chain_valid": audit_res["valid"],
+            "internal_audit_chain_valid": audit_res["valid"],
+            "internal_audit_only": True,
+            "chain_scope_note": (
+                "Verifies internal SQLite database audit log integrity and hash-chaining sequence since ingestion. "
+                "Does NOT prove external origin authenticity, camera hardware signatures, or independent cryptographic provenance."
+            ),
             "audit_count": audit_res["count"],
             "verification_errors": audit_res["errors"],
             "entries": audit_rows
         }
 
-        # 15. Report Meta
+        # 17. Report Meta & Fingerprint Scope
         report_meta = {
             "report_id": report_id,
             "case_id": case_id,
@@ -486,7 +685,11 @@ def build_report_json(case_id: str, report_id: Optional[str] = None) -> Dict[str
             "generated_at": now_iso,
             "tool_version": TOOL_VERSION,
             "disclaimer": DISCLAIMER_TEXT,
-            "custody_note": CUSTODY_NOTE_TEXT
+            "custody_note": CUSTODY_NOTE_TEXT,
+            "fingerprint_scope": {
+                "protects": "Integrity of this compiled report document against post-generation alteration of findings or metadata.",
+                "does_not_protect": "Authenticity of the underlying media, real-world factual claims, or external provenance."
+            }
         }
 
         # Assemble full report payload before hashing
@@ -501,7 +704,8 @@ def build_report_json(case_id: str, report_id: Optional[str] = None) -> Dict[str
             "timeline": timeline,
             "limitations_and_alternatives": limitations_and_alternatives,
             "human_review_recommendations": human_review_recommendations,
-            "audit_excerpt": audit_excerpt
+            "audit_excerpt": audit_excerpt,
+            "artifacts": artifacts_rows
         }
 
         # Compute deterministic canonical JSON SHA-256

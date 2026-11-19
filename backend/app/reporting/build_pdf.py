@@ -27,6 +27,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import (
     HRFlowable,
+    Image as RLImage,
     KeepTogether,
     PageBreak,
     Paragraph,
@@ -120,6 +121,7 @@ def build_pdf_report(report_data: Dict[str, Any], output_path: Optional[Path] = 
     total_findings = case_summary.get("total_findings", 0)
     str_counts = case_summary.get("strength_counts", {})
     rev_counts = case_summary.get("review_status_counts", {})
+    cov_warning = case_summary.get("coverage_warning", "")
 
     banner_data = [
         [
@@ -150,6 +152,13 @@ def build_pdf_report(report_data: Dict[str, Any], output_path: Optional[Path] = 
             )
         ],
     ]
+    if cov_warning:
+        banner_data.append([
+            Paragraph(
+                f"<font color='#b91c1c'><b>{safe_text(cov_warning)}</b></font>",
+                styles["BannerBody"]
+            )
+        ])
     banner_table = Table(banner_data, colWidths=[540])
     banner_table.setStyle(
         TableStyle([
@@ -227,9 +236,51 @@ def build_pdf_report(report_data: Dict[str, Any], output_path: Optional[Path] = 
     story.append(Spacer(1, 8))
 
     # =========================================================================
-    # SECTION 4: Methods Used
+    # SECTION 4: Methods Used & Analyzer Coverage
     # =========================================================================
-    story.append(Paragraph("4. Methods Used & Analysis Runs", styles["SectionHeading"]))
+    story.append(Paragraph("4. Methods Used, Coverage Suite & Model Provenance", styles["SectionHeading"]))
+
+    # Coverage summary
+    cov = case_summary.get("analyzer_coverage", {})
+    if cov:
+        cov_pct = cov.get("coverage_percentage", 100.0)
+        cov_stat = "COMPLETE" if cov.get("coverage_complete") else "INCOMPLETE"
+        cov_color = "#15803d" if cov.get("coverage_complete") else "#b91c1c"
+        story.append(Paragraph(
+            f"<b>Analyzer Coverage Suite:</b> <font color='{cov_color}'><b>{cov_stat}</b></font> &nbsp;|&nbsp; "
+            f"Executed: <b>{cov.get('completed', 0)} / {cov.get('total_expected', 0)}</b> ({cov_pct}%) &nbsp;|&nbsp; "
+            f"Skipped / Failed: <b>{cov.get('skipped_or_failed_count', 0)}</b>",
+            styles["Body"]
+        ))
+
+    # Dedicated AI-Origin Classifier Provenance Box
+    ai_meta = case_summary.get("ai_origin_status", {})
+    if ai_meta:
+        ai_st = ai_meta.get("status", "N/A")
+        ai_color = "#15803d" if ai_st in ("LOADED_AND_EXECUTED", "READY") else ("#d97706" if "SKIPPED" in ai_st else "#64748b")
+        ai_box_data = [
+            [Paragraph("AI-ORIGIN CLASSIFIER PROVENANCE & CALIBRATION STATUS", styles["TableCellBold"])],
+            [Paragraph(
+                f"<b>Model ID:</b> {safe_text(ai_meta.get('model_id'))} &nbsp;|&nbsp; "
+                f"<b>Execution Status:</b> <font color='{ai_color}'><b>{safe_text(ai_st)}</b></font> &nbsp;|&nbsp; "
+                f"<b>Calibrated:</b> <font color='#b91c1c'><b>FALSE (Raw Softmax Output)</b></font><br/>"
+                f"<b>Description:</b> {safe_text(ai_meta.get('description'))}<br/>"
+                f"<b>Mandatory Disclaimer:</b> <i>{safe_text(ai_meta.get('calibration_disclaimer'))}</i>",
+                styles["CalloutText"]
+            )]
+        ]
+        ai_table = Table(ai_box_data, colWidths=[540])
+        ai_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+            ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#cbd5e1")),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        story.append(ai_table)
+        story.append(Spacer(1, 6))
+
     methods = report_data.get("methods_used", [])
     if not methods:
         story.append(Paragraph("<i>No analysis runs recorded.</i>", styles["Body"]))
@@ -308,6 +359,25 @@ def build_pdf_report(report_data: Dict[str, Any], output_path: Optional[Path] = 
         findings_table = Table(f_rows, colWidths=[55, 85, 160, 70, 70, 100])
         findings_table.setStyle(_make_table_style(has_header=True, num_rows=len(f_rows)))
         story.append(findings_table)
+
+        # Visual copy-move overlay artifact & supporting measurements
+        artifacts_list = report_data.get("artifacts", [])
+        copymove_arts = [a for a in artifacts_list if a.get("kind") == "image_copymove_overlay"]
+        if copymove_arts:
+            story.append(Spacer(1, 6))
+            story.append(Paragraph("<b>Copy-Move Visual Keypoint Inlier Overlay:</b>", styles["SubSectionHeading"]))
+            for ca in copymove_arts:
+                p_str = ca.get("path")
+                if p_str and Path(p_str).exists():
+                    try:
+                        img_flow = RLImage(p_str, width=320, height=190)
+                        story.append(img_flow)
+                        story.append(Paragraph(
+                            f"<i>Figure: {safe_text(ca.get('description'))} (SHA-256: {safe_text(ca.get('sha256', ''))[:16]}...)</i>",
+                            styles["CalloutText"]
+                        ))
+                    except Exception:
+                        pass
     story.append(Spacer(1, 10))
 
     # =========================================================================
@@ -424,18 +494,21 @@ def build_pdf_report(report_data: Dict[str, Any], output_path: Optional[Path] = 
     story.append(Spacer(1, 10))
 
     # =========================================================================
-    # SECTION 10: Analysis History & Audit Log Excerpt
+    # SECTION 10: Analysis History & Internal Database Audit Log Excerpt
     # =========================================================================
-    story.append(Paragraph("10. Analysis History & Audit Log Excerpt", styles["SectionHeading"]))
+    story.append(Paragraph("10. Analysis History & Internal Database Audit Log Excerpt", styles["SectionHeading"]))
     audit_data = report_data.get("audit_excerpt", {})
-    is_valid = audit_data.get("audit_chain_valid", False)
+    is_valid = audit_data.get("internal_audit_chain_valid", audit_data.get("audit_chain_valid", False))
     valid_color = "#15803d" if is_valid else "#b91c1c"
-    valid_str = "VALID (CRYPTOGRAPHICALLY VERIFIED)" if is_valid else "CORRUPTED (HASH MISMATCH)"
+    valid_str = "CONSISTENT (INTERNAL DATABASE HASH CHAIN VERIFIED)" if is_valid else "CORRUPTED (HASH MISMATCH)"
 
     story.append(
         Paragraph(
-            f"<b>Audit Chain Integrity:</b> <font color='{valid_color}'><b>{safe_text(valid_str)}</b></font> &nbsp;|&nbsp; "
-            f"Total Chained Entries: <b>{safe_text(audit_data.get('audit_count', 0))}</b>",
+            f"<b>Internal Audit Chain Integrity:</b> <font color='{valid_color}'><b>{safe_text(valid_str)}</b></font> &nbsp;|&nbsp; "
+            f"Total Chained Entries: <b>{safe_text(audit_data.get('audit_count', 0))}</b><br/>"
+            f"<i>Scope Notice: Internal database audit hash chaining verifies that ingested records and evidence "
+            f"hashes have not been tampered with since initial ingestion into TruthLens X. This does NOT constitute "
+            f"independent camera hardware authentication, external legal chain-of-custody, or third-party notarization.</i>",
             styles["Body"],
         )
     )
@@ -472,15 +545,17 @@ def build_pdf_report(report_data: Dict[str, Any], output_path: Optional[Path] = 
     footer_data = [
         [
             Paragraph(
-                "11. Report Integrity Footer",
+                "11. Report Integrity Footer & Cryptographic Scope",
                 styles["SectionHeading"],
             )
         ],
         [
             Paragraph(
-                "The hash below is computed deterministically over the canonical JSON payload "
-                "excluding this hash field. Any subsequent tampering or alteration of database "
-                "records or report metadata will invalidate this digital fingerprint.",
+                "<b>WHAT THIS DIGITAL FINGERPRINT PROTECTS:</b> The SHA-256 hash below is computed deterministically "
+                "over the canonical JSON report data excluding this hash field. It guarantees that this report document "
+                "and its cited observations have not been modified or corrupted after generation.<br/>"
+                "<b>WHAT THIS DIGITAL FINGERPRINT DOES NOT PROTECT:</b> This fingerprint does NOT validate the ground-truth "
+                "authenticity of the underlying media, does NOT certify external real-world facts, and is NOT a cryptographic camera signature.",
                 styles["CalloutText"],
             )
         ],

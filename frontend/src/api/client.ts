@@ -189,6 +189,7 @@ export const api = {
     request<{ reviews: SchemaReviewResponse[]; total: number }>(`/api/cases/${caseId}/reviews`),
 
   // Reports
+  getReport: (caseId: string) => request<SchemaReportResponse>(`/api/cases/${caseId}/report`),
   generateReport: (caseId: string, format: string = "json") =>
     request<SchemaReportResponse>(`/api/cases/${caseId}/report`, {
       method: "POST",

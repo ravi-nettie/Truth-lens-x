@@ -90,10 +90,13 @@ def analyze_ela(
     case_id: str,
     image_path: Path,
     artifact_dir: Path,
-    working_image: Optional[Image.Image] = None
+    working_image: Optional[Image.Image] = None,
+    original_format: Optional[str] = None
 ) -> Tuple[List[Observation], List[Dict[str, Any]], Dict[str, Any]]:
     """
     Performs ELA forensic analysis, produces heatmap artifact, and returns observations.
+    Correctly recognizes non-JPEG formats (PNG, WebP, etc.) where ELA cannot assess
+    prior JPEG compression history.
     """
     observations: List[Observation] = []
     artifacts: List[Dict[str, Any]] = []
@@ -104,6 +107,16 @@ def analyze_ela(
             img = working_image
         else:
             img = Image.open(image_path)
+
+        # Detect source container format
+        src_fmt = (original_format or getattr(img, "format", None) or image_path.suffix.lstrip(".").upper())
+        if not src_fmt:
+            src_fmt = "UNKNOWN"
+        src_fmt_upper = src_fmt.upper()
+        details["source_format"] = src_fmt_upper
+
+        is_jpeg = src_fmt_upper in ("JPEG", "JPG") or image_path.suffix.lower() in (".jpg", ".jpeg")
+        details["is_jpeg_original"] = is_jpeg
 
         # Compute ELA
         diff_gray, heatmap_rgb, stats = compute_ela(img, quality=90)
@@ -127,39 +140,63 @@ def analyze_ela(
             "kind": "image_ela",
             "path": str(artifact_path),
             "sha256": art_sha256,
-            "description": "Error Level Analysis (ELA) difference heatmap at JPEG quality 90"
+            "description": f"Error Level Analysis (ELA) difference heatmap at JPEG quality 90 (source format: {src_fmt_upper})"
         })
 
-        # Forensic strength: Informational (or Weak if high block variance suggesting composite boundaries)
-        # Never exceeds weak.
-        if stats["max_block_diff"] > 35.0 and stats["std_block_diff"] > 8.0:
-            strength = Strength.weak
-            summary = "Elevated regional compression difference detected via Error Level Analysis"
+        if not is_jpeg:
+            # Forensic Rule: Non-JPEG source formats (PNG, WebP lossless, etc.) do NOT have
+            # prior JPEG compression history. Saving to JPEG quality 90 naturally creates high
+            # DCT residual across all high-contrast edges and sharp transitions.
+            details["ela_applicable"] = False
+            strength = Strength.informational
+            summary = f"Non-JPEG source container ({src_fmt_upper}): ELA compression history not applicable"
             explanation = (
-                f"Error Level Analysis at quality 90 reveals localized regions with elevated error levels "
-                f"(max block diff {stats['max_block_diff']}, p95 diff {stats['p95_diff']}). "
-                f"Different parts of the image show differing compression response characteristics."
+                f"The input image container is '{src_fmt_upper}', a non-JPEG/lossless format. Error Level Analysis "
+                f"evaluates differences in recompression response under the assumption of prior JPEG quantization. "
+                f"When a non-JPEG image is recompressed as JPEG, high DCT residuals (max block diff {stats['max_block_diff']}) "
+                f"naturally occur across all sharp boundaries and physical textures because the original was never JPEG compressed. "
+                f"This does not indicate tampering."
             )
             alt_explanation = (
-                "High-contrast physical textures (such as fine text, brickwork, hair, leaves, or sharp edges) "
-                "naturally generate higher high-frequency DCT residual error during JPEG recompression without any splicing."
+                f"Expected DCT quantization noise resulting from converting a lossless/non-JPEG {src_fmt_upper} "
+                f"container to JPEG for the first time."
+            )
+            limitations = (
+                f"Error Level Analysis is technically invalid for non-JPEG ({src_fmt_upper}) source files. "
+                f"Absence of prior JPEG quantization artifacts means ELA cannot assess compression history or localized splicing."
             )
         else:
-            strength = Strength.informational
-            summary = "Error Level Analysis completed across image frame"
-            explanation = (
-                f"Error Level Analysis difference map computed at quality 90 (mean diff {stats['mean_diff']}, "
-                f"p95 diff {stats['p95_diff']}). Error distribution is relatively uniform across the container."
-            )
-            alt_explanation = (
-                "Uniform JPEG recompression error distribution typical of single-source camera captures or uniformly exported images."
-            )
+            details["ela_applicable"] = True
+            # Forensic strength for JPEG: Informational (or Weak if high block variance)
+            # Never exceeds weak.
+            if stats["max_block_diff"] > 35.0 and stats["std_block_diff"] > 8.0:
+                strength = Strength.weak
+                summary = "Elevated regional compression difference detected via Error Level Analysis"
+                explanation = (
+                    f"Error Level Analysis at quality 90 reveals localized regions with elevated error levels "
+                    f"(max block diff {stats['max_block_diff']}, p95 diff {stats['p95_diff']}). "
+                    f"Different parts of the image show differing compression response characteristics."
+                )
+                alt_explanation = (
+                    "High-contrast physical textures (such as fine text, brickwork, hair, leaves, or sharp edges) "
+                    "naturally generate higher high-frequency DCT residual error during JPEG recompression without any splicing."
+                )
+            else:
+                strength = Strength.informational
+                summary = "Error Level Analysis completed across image frame"
+                explanation = (
+                    f"Error Level Analysis difference map computed at quality 90 (mean diff {stats['mean_diff']}, "
+                    f"p95 diff {stats['p95_diff']}). Error distribution is relatively uniform across the container."
+                )
+                alt_explanation = (
+                    "Uniform JPEG recompression error distribution typical of single-source camera captures or uniformly exported images."
+                )
 
-        limitations = (
-            "Error Level Analysis is a heuristic visual aid, NOT a conclusive tampering test. "
-            "High-contrast textures and natural sharp edges inherently show elevated error levels in untouched original photos. "
-            "Always interpret ELA heatmaps alongside EXIF metadata and structural copy-move or frequency checks."
-        )
+            limitations = (
+                "Error Level Analysis is a heuristic visual aid, NOT a conclusive tampering test. "
+                "High-contrast textures and natural sharp edges inherently show elevated error levels in untouched original photos. "
+                "Always interpret ELA heatmaps alongside EXIF metadata and structural copy-move or frequency checks."
+            )
 
         observations.append(
             Observation(

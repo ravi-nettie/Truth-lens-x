@@ -12,9 +12,10 @@ const STAGES = [
 interface StatusBarProps {
   status: string;
   className?: string;
+  hasReport?: boolean;
 }
 
-export const StatusBar: React.FC<StatusBarProps> = ({ status, className = "" }) => {
+export const StatusBar: React.FC<StatusBarProps> = ({ status, className = "", hasReport = false }) => {
   const normStatus = (status || "created").toLowerCase();
 
   // Determine stage progression index (0 to 4)
@@ -25,60 +26,94 @@ export const StatusBar: React.FC<StatusBarProps> = ({ status, className = "" }) 
   else if (normStatus === "analyzed") activeIndex = 2;
   else if (normStatus === "correlated") activeIndex = 3;
   else if (normStatus === "in_review") activeIndex = 3;
-  else if (normStatus === "reported") activeIndex = 4;
+  else if (normStatus === "reported" || normStatus === "completed") activeIndex = 4;
 
-  const isCompleted = normStatus === "reported";
+  const isReported = normStatus === "reported" || normStatus === "completed" || hasReport;
+  const isAnalyzing = normStatus === "analyzing";
 
   return (
-    <div className={`rounded border border-outline-variant bg-white p-4 shadow-sm ${className}`}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className={`rounded-xl border border-slate-200 bg-white p-4 shadow-xs ${className}`}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {STAGES.map((stage, idx) => {
-          const isPassed = idx < activeIndex || (idx === activeIndex && isCompleted);
-          const isCurrent = idx === activeIndex && !isCompleted;
+          // Completed if prior to active index, or if reported/has report for report stage
+          const isPassed =
+            idx < activeIndex ||
+            (stage.id === "report" && isReported) ||
+            (normStatus === "reported" && idx <= 4);
+
+          const isCurrent = idx === activeIndex && !isPassed;
+
+          // Only truly running tasks (like analyzing) should show an animated pulse
+          const shouldPulse = isCurrent && isAnalyzing;
+
+          let subtitle = "";
+          if (isPassed) {
+            subtitle = "Done";
+          } else if (isCurrent) {
+            if (stage.id === "analyze") subtitle = isAnalyzing ? "Running..." : "Completed";
+            else if (stage.id === "correlate") subtitle = "Correlating...";
+            else if (stage.id === "review") subtitle = "Ready for Review";
+            else if (stage.id === "report") subtitle = "Available";
+            else subtitle = "Active";
+          } else if (stage.id === "report" && isReported) {
+            subtitle = "Available";
+          }
 
           return (
             <React.Fragment key={stage.id}>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <div
                   className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all ${
                     isPassed
                       ? "bg-emerald-50 text-emerald-700 border border-emerald-300"
+                      : shouldPulse
+                      ? "bg-blue-600 text-white shadow-xs ring-2 ring-blue-300 animate-pulse"
                       : isCurrent
-                      ? "bg-primary-container text-white shadow-sm ring-2 ring-primary/20 animate-pulse"
-                      : "bg-surface-container-low text-on-surface-variant border border-outline-variant"
+                      ? "bg-blue-50 text-blue-700 border border-blue-300 font-semibold"
+                      : "bg-slate-50 text-slate-400 border border-slate-200"
                   }`}
                 >
                   {isPassed ? (
                     <CheckCircle2 className="h-4 w-4" />
-                  ) : isCurrent ? (
-                    <span>{idx + 1}</span>
                   ) : (
-                    <Circle className="h-3 w-3 text-on-surface-variant/50" />
+                    <span>{idx + 1}</span>
                   )}
                 </div>
                 <div>
                   <span
-                    className={`text-xs font-bold tracking-wider ${
-                      isCurrent
-                        ? "text-primary"
-                        : isPassed
-                        ? "text-emerald-700"
-                        : "text-on-surface-variant"
+                    className={`text-xs font-bold tracking-wider font-mono ${
+                      isPassed
+                        ? "text-emerald-800"
+                        : isCurrent
+                        ? "text-blue-700"
+                        : "text-slate-400"
                     }`}
                   >
                     {stage.label}
                   </span>
-                  {isCurrent && (
-                    <p className="text-[10px] text-on-surface-variant -mt-0.5">In Progress</p>
+                  {subtitle && (
+                    <p
+                      className={`text-[10px] -mt-0.5 font-medium ${
+                        isPassed
+                          ? "text-emerald-600"
+                          : isCurrent
+                          ? "text-blue-600"
+                          : "text-slate-400"
+                      }`}
+                    >
+                      {subtitle}
+                    </p>
                   )}
                 </div>
               </div>
 
               {idx < STAGES.length - 1 && (
-                <div className="hidden sm:flex flex-1 max-w-[48px] items-center justify-center">
+                <div className="hidden sm:flex flex-1 max-w-[56px] items-center justify-center">
                   <div
                     className={`h-0.5 w-full ${
-                      idx < activeIndex ? "bg-emerald-300" : "bg-outline-variant"
+                      idx < activeIndex || (idx === 3 && isReported)
+                        ? "bg-emerald-400"
+                        : "bg-slate-200"
                     }`}
                   />
                 </div>

@@ -24,6 +24,9 @@ word2number>=1.1
 # Machine Learning & Reporting
 scikit-learn>=1.4.0
 reportlab>=4.1.0
+torch>=2.0.0
+transformers>=4.38.0
+safetensors>=0.4.0
 
 # Testing & Client
 pytest>=8.0.0

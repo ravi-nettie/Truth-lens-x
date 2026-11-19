@@ -56,6 +56,52 @@ def _find_report_file(target_id: str, extension: str) -> Optional[Path]:
     return None
 
 
+@router.get("/cases/{case_id}/report", response_model=ReportResponse)
+def get_or_build_case_report(case_id: str) -> ReportResponse:
+    """
+    Retrieves the latest compiled report for a case, or compiles it on the fly if not yet created.
+    Never blocks on unreviewed findings; always returns a valid ReportResponse.
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, title, status FROM cases WHERE id = ?", (case_id,))
+        case_row = cursor.fetchone()
+        if not case_row:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": {"code": "NOT_FOUND", "message": f"Case '{case_id}' not found."}}
+            )
+
+    # Check for existing report file on disk
+    case_reports_dir = settings.artifacts_dir / case_id / "reports"
+    if case_reports_dir.is_dir():
+        json_files = list(case_reports_dir.glob("*.json"))
+        if json_files:
+            json_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            latest_json = json_files[0]
+            try:
+                import json as py_json
+                with open(latest_json, "r", encoding="utf-8") as f:
+                    rep_payload = py_json.load(f)
+                rep_id = latest_json.stem
+                return ReportResponse(
+                    report_id=rep_id,
+                    case_id=case_id,
+                    generated_at=rep_payload.get("report_meta", {}).get("generated_at", ""),
+                    format="json",
+                    pdf_url=f"/api/reports/{rep_id}.pdf",
+                    json_url=f"/api/reports/{rep_id}.json",
+                    report_json_sha256=rep_payload.get("report_json_sha256"),
+                    report_json=rep_payload,
+                    download_url=f"/api/reports/{rep_id}.json"
+                )
+            except Exception:
+                pass
+
+    # If no report found or reading failed, generate it cleanly now
+    return generate_report(case_id)
+
+
 @router.post("/cases/{case_id}/report", response_model=ReportResponse)
 def generate_report(
     case_id: str,
@@ -134,6 +180,18 @@ def get_pdf_report(report_id: str):
     """Streams the compiled PDF forensic report with proper MIME type and Content-Disposition."""
     pdf_file = _find_report_file(report_id, "pdf")
     if not pdf_file or not pdf_file.exists():
+        # Fallback: if report_id corresponds to a case_id, generate on the fly
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM cases WHERE id = ?", (report_id,))
+            if cursor.fetchone():
+                try:
+                    gen_res = generate_report(report_id)
+                    pdf_file = _find_report_file(gen_res.report_id, "pdf")
+                except Exception:
+                    pass
+
+    if not pdf_file or not pdf_file.exists():
         raise HTTPException(
             status_code=404,
             detail={"error": {"code": "NOT_FOUND", "message": f"PDF report for '{report_id}' not found."}}
@@ -151,6 +209,18 @@ def get_pdf_report(report_id: str):
 def get_json_report(report_id: str):
     """Streams the compiled JSON forensic report with proper MIME type and Content-Disposition."""
     json_file = _find_report_file(report_id, "json")
+    if not json_file or not json_file.exists():
+        # Fallback: if report_id corresponds to a case_id, generate on the fly
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM cases WHERE id = ?", (report_id,))
+            if cursor.fetchone():
+                try:
+                    gen_res = generate_report(report_id)
+                    json_file = _find_report_file(gen_res.report_id, "json")
+                except Exception:
+                    pass
+
     if not json_file or not json_file.exists():
         raise HTTPException(
             status_code=404,

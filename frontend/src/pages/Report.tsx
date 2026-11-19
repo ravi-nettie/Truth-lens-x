@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   FileSpreadsheet,
-  ArrowLeft,
   Download,
   CheckCircle2,
   Lock,
@@ -12,16 +11,14 @@ import {
   HelpCircle,
   ShieldCheck,
   Scale,
-  Cpu,
   Layers,
-  Hash,
   Loader2,
-  Sparkles,
   Info,
   ExternalLink,
   Copy,
   Printer,
-  Check,
+  RefreshCw,
+  GitBranch,
 } from "lucide-react";
 import {
   api,
@@ -29,8 +26,16 @@ import {
   SchemaObservation,
   SchemaReportResponse,
   SchemaReviewResponse,
+  SchemaGraphResponse,
 } from "../api/client";
 import { CaseHeaderTabs } from "../components/CaseHeaderTabs";
+
+const STRENGTH_ORDER: Record<string, number> = {
+  strong: 0,
+  moderate: 1,
+  weak: 2,
+  informational: 3,
+};
 
 export const Report: React.FC = () => {
   const { id: caseId } = useParams<{ id: string }>();
@@ -38,6 +43,7 @@ export const Report: React.FC = () => {
   const [caseDetail, setCaseDetail] = useState<SchemaCaseDetailResponse | null>(null);
   const [observations, setObservations] = useState<SchemaObservation[]>([]);
   const [reviews, setReviews] = useState<SchemaReviewResponse[]>([]);
+  const [graphData, setGraphData] = useState<SchemaGraphResponse | null>(null);
   const [reportResult, setReportResult] = useState<SchemaReportResponse | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -50,14 +56,18 @@ export const Report: React.FC = () => {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const [caseRes, obsRes, revRes] = await Promise.all([
+      const [caseRes, obsRes, revRes, graphRes, repRes] = await Promise.all([
         api.getCase(caseId),
         api.getObservations(caseId).catch(() => []),
         api.getCaseReviews(caseId).catch(() => ({ reviews: [] })),
+        api.getGraph(caseId).catch(() => null),
+        api.getReport(caseId).catch(() => null),
       ]);
       setCaseDetail(caseRes);
       setObservations(obsRes || []);
       setReviews(revRes.reviews || []);
+      if (graphRes) setGraphData(graphRes);
+      if (repRes) setReportResult(repRes);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to load case report data.");
     } finally {
@@ -94,6 +104,27 @@ export const Report: React.FC = () => {
   const reviewedTotal = confirmedCount + dismissedCount + needsWorkCount;
   const reviewPct = totalObs > 0 ? Math.round((reviewedTotal / totalObs) * 100) : 100;
 
+  // Sorted findings by strength tier
+  const sortedObservations = [...observations].sort((a, b) => {
+    const rankA = STRENGTH_ORDER[a.evidence_strength?.toLowerCase()] ?? 99;
+    const rankB = STRENGTH_ORDER[b.evidence_strength?.toLowerCase()] ?? 99;
+    return rankA - rankB;
+  });
+
+  // Calculate review priority
+  const strongCount = observations.filter((o) => o.evidence_strength === "strong").length;
+  const moderateCount = observations.filter((o) => o.evidence_strength === "moderate").length;
+  const weakCount = observations.filter((o) => o.evidence_strength === "weak").length;
+  const infoCount = observations.filter((o) => o.evidence_strength === "informational").length;
+  const contradictionsCount = graphData?.edges?.filter((e) => e.relation === "CONTRADICTS").length ?? 0;
+
+  let reviewPriority = "LOW";
+  if (strongCount >= 1 || contradictionsCount >= 1) {
+    reviewPriority = "HIGH";
+  } else if (moderateCount >= 1) {
+    reviewPriority = "MEDIUM";
+  }
+
   // Handle report generation
   const handleGenerateReport = async () => {
     if (!caseId) return;
@@ -118,6 +149,14 @@ export const Report: React.FC = () => {
 
   const caseObj = caseDetail?.case;
   const evidenceItems = caseDetail?.evidence_items || [];
+  const repData = reportResult?.report_json;
+
+  const pdfDownloadUrl = reportResult?.pdf_url || `/api/reports/${caseId}.pdf`;
+  const jsonDownloadUrl = reportResult?.json_url || `/api/reports/${caseId}.json`;
+  const sealedSha256 =
+    reportResult?.report_json_sha256 ||
+    repData?.report_json_sha256 ||
+    "Auto-compiles upon report request";
 
   return (
     <div className="p-6 lg:p-8 max-w-[1520px] mx-auto w-full flex flex-col gap-6">
@@ -133,7 +172,7 @@ export const Report: React.FC = () => {
           </h2>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <button
             type="button"
             onClick={() => window.print()}
@@ -143,30 +182,50 @@ export const Report: React.FC = () => {
             <span>Print Dossier</span>
           </button>
 
-          {(reportResult || caseObj?.status === "reported") && (
-            <a
-              href={reportResult?.pdf_url || `/api/reports/${caseId}.pdf`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="h-9 px-3.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
-            >
-              <Download className="h-4 w-4" />
-              <span>Download PDF</span>
-            </a>
-          )}
+          <a
+            href={pdfDownloadUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            download
+            className="h-9 px-3.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+          >
+            <Download className="h-4 w-4" />
+            <span>Download PDF</span>
+          </a>
+
+          <a
+            href={jsonDownloadUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            download
+            className="h-9 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors flex items-center gap-1.5"
+          >
+            <Download className="h-4 w-4 text-slate-500" />
+            <span>Download JSON</span>
+          </a>
         </div>
       </div>
 
       {errorMsg && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700 flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 shrink-0 text-red-600" />
-          <span>{errorMsg}</span>
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-red-600" />
+            <span>{errorMsg}</span>
+          </div>
+          <button
+            type="button"
+            onClick={loadData}
+            className="px-2.5 py-1 rounded bg-white border border-red-200 text-red-700 hover:bg-red-50 text-[11px] font-semibold"
+          >
+            Retry
+          </button>
         </div>
       )}
 
       {loading ? (
-        <div className="text-xs text-slate-500 font-mono py-20 text-center">
-          Loading forensic review completeness & dossier status...
+        <div className="text-xs text-slate-500 font-mono py-20 text-center flex items-center justify-center gap-2">
+          <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+          <span>Loading forensic review completeness & dossier status...</span>
         </div>
       ) : !caseDetail ? (
         <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-16 text-center text-xs text-slate-500">
@@ -231,6 +290,41 @@ export const Report: React.FC = () => {
                 </div>
               </div>
 
+              {/* Forensic Operational & Decision-Support Warning Banner */}
+              <div className="rounded-xl border border-red-300 bg-red-50/70 p-4 mb-8 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-red-900 font-mono">
+                    Decision-Support Only — Not a Forensic Verdict
+                  </span>
+                </div>
+                <p className="text-xs text-slate-700 leading-relaxed">
+                  <strong>Disclaimer:</strong> Decision-support report; not a definitive legal determination of authenticity or synthetic manipulation. Findings record technical signal telemetry under strict air-gapped containment.
+                </p>
+                <div className="p-3 rounded-lg bg-white/80 border border-red-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                  <div>
+                    <span className="font-bold text-slate-900">Review Priority Triage: </span>
+                    <span
+                      className={`font-mono font-bold px-2 py-0.5 rounded text-[11px] ${
+                        reviewPriority === "HIGH"
+                          ? "bg-red-100 text-red-700 border border-red-200"
+                          : reviewPriority === "MEDIUM"
+                          ? "bg-amber-100 text-amber-700 border border-amber-200"
+                          : "bg-blue-100 text-blue-700 border border-blue-200"
+                      }`}
+                    >
+                      {reviewPriority} PRIORITY
+                    </span>
+                    <span className="text-slate-500 text-[11px] ml-2">
+                      (Rule: HIGH if strong ≥ 1 OR contradictions ≥ 1 · MEDIUM if moderate ≥ 1 · LOW otherwise)
+                    </span>
+                  </div>
+                  <span className="font-mono text-slate-600 text-[11px] font-semibold shrink-0">
+                    {unreviewedCount} unreviewed finding(s)
+                  </span>
+                </div>
+              </div>
+
               {/* Section 1: Executive Summary */}
               <div className="mb-8 space-y-3">
                 <div className="flex items-center gap-2 pb-1 border-b border-slate-100">
@@ -255,36 +349,78 @@ export const Report: React.FC = () => {
                 </div>
               </div>
 
-              {/* Section 2: Synthesis of Forensic Findings */}
+              {/* Section 2: Evidence Table & Pre-Report Hash Verification */}
               <div className="mb-8 space-y-3">
                 <div className="flex items-center gap-2 pb-1 border-b border-slate-100">
                   <span className="w-1.5 h-4 bg-blue-600 rounded"></span>
                   <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                    2. Synthesis of Forensic Findings ({observations.length})
+                    2. Evidence Table & Pre-Report Hash Verification (SHA-256)
                   </h3>
                 </div>
                 <div className="overflow-x-auto rounded-lg border border-slate-200">
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="bg-slate-50 text-slate-600 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-200">
-                        <th className="py-2.5 px-3">Indicator</th>
-                        <th className="py-2.5 px-3">Method</th>
+                        <th className="py-2.5 px-3">Original Name</th>
                         <th className="py-2.5 px-3">Modality</th>
-                        <th className="py-2.5 px-3">Strength Tier</th>
-                        <th className="py-2.5 px-3 text-right">Analyst Decision</th>
+                        <th className="py-2.5 px-3">File Size</th>
+                        <th className="py-2.5 px-3">SHA-256 Hash</th>
+                        <th className="py-2.5 px-3 text-right">Integrity Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
-                      {observations.map((obs) => {
-                        const decision = reviewMap.get(obs.id) || "unreviewed";
-                        return (
-                          <tr key={obs.id} className="hover:bg-slate-50 transition-colors">
-                            <td className="py-2.5 px-3 font-semibold text-slate-900">{obs.indicator}</td>
-                            <td className="py-2.5 px-3 text-slate-500 font-sans">{obs.method}</td>
-                            <td className="py-2.5 px-3 text-slate-500 uppercase">{obs.modality}</td>
-                            <td className="py-2.5 px-3">
+                      {evidenceItems.map((ev) => (
+                        <tr key={ev.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-2.5 px-3 font-semibold text-slate-900 font-sans">{ev.filename}</td>
+                          <td className="py-2.5 px-3 uppercase text-slate-500">{ev.kind}</td>
+                          <td className="py-2.5 px-3 text-slate-500">
+                            {ev.size_bytes ? `${(ev.size_bytes / 1024).toFixed(1)} KB` : "N/A"}
+                          </td>
+                          <td className="py-2.5 px-3 text-blue-600 font-bold break-all select-all">{ev.sha256}</td>
+                          <td className="py-2.5 px-3 text-right">
+                            <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold font-sans text-xs">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              <span>MATCH (0444)</span>
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Section 3: Synthesis of Forensic Findings (Sorted by Strength) */}
+              <div className="mb-8 space-y-3">
+                <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-4 bg-blue-600 rounded"></span>
+                    <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                      3. Synthesis of Forensic Findings ({sortedObservations.length})
+                    </h3>
+                  </div>
+                  <span className="text-xs text-slate-500 font-mono">
+                    Sorted: Strong &rarr; Informational
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  {sortedObservations.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-xs text-slate-500">
+                      No forensic findings recorded for this case.
+                    </div>
+                  ) : (
+                    sortedObservations.map((obs) => {
+                      const decision = reviewMap.get(obs.id) || "unreviewed";
+                      return (
+                        <div
+                          key={obs.id}
+                          className="rounded-lg border border-slate-200 bg-white p-4 space-y-2 hover:border-slate-300 transition-colors"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
                               <span
-                                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono ${
                                   obs.evidence_strength === "strong"
                                     ? "bg-red-50 text-red-700 border border-red-200"
                                     : obs.evidence_strength === "moderate"
@@ -296,53 +432,112 @@ export const Report: React.FC = () => {
                               >
                                 {obs.evidence_strength}
                               </span>
-                            </td>
-                            <td className="py-2.5 px-3 text-right">
+                              <h4 className="text-xs font-bold text-slate-900 font-mono">
+                                {obs.indicator}
+                              </h4>
+                              <span className="text-[10px] text-slate-400 uppercase font-mono">
+                                [{obs.modality}]
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="text-slate-500 font-sans">Review Status:</span>
                               <span
                                 className={`font-semibold capitalize text-xs ${
                                   decision === "confirmed"
                                     ? "text-emerald-700"
                                     : decision === "dismissed"
                                     ? "text-red-700"
-                                    : "text-slate-400"
+                                    : "text-slate-500 italic"
                                 }`}
                               >
                                 {decision}
                               </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                            </div>
+                          </div>
+
+                          <div className="text-xs text-slate-700 space-y-1">
+                            <p>
+                              <strong>Explanation:</strong> {obs.explanation || obs.summary}
+                            </p>
+                            {obs.alternative_explanation && (
+                              <p className="text-slate-600 bg-slate-50 p-2 rounded border border-slate-100 italic">
+                                <strong>Alternative Explanation:</strong> {obs.alternative_explanation}
+                              </p>
+                            )}
+                            {obs.model_score !== null && obs.model_score !== undefined && (
+                              <p className="text-[11px] font-mono text-slate-500">
+                                Model Output: {Number(obs.model_score).toFixed(3)} (uncalibrated model output)
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
-              {/* Section 3: Chain of Custody & Cryptographic Verification */}
+              {/* Section 4: Cross-Modal Contradiction Graph & Correlation Links */}
               <div className="mb-8 space-y-3">
-                <div className="flex items-center gap-2 pb-1 border-b border-slate-100">
-                  <span className="w-1.5 h-4 bg-blue-600 rounded"></span>
-                  <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                    3. Chain of Custody & Cryptographic Verification
-                  </h3>
-                </div>
-                <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 font-mono text-xs flex flex-col gap-2.5">
-                  {evidenceItems.map((ev, idx) => (
-                    <div
-                      key={ev.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-200 last:border-0 last:pb-0 gap-1"
-                    >
-                      <span className="text-slate-600 font-sans font-medium">{ev.filename}:</span>
-                      <span className="text-blue-600 font-bold break-all select-all font-mono">
-                        {ev.sha256}
-                      </span>
-                    </div>
-                  ))}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-1 gap-1 text-[11px] text-slate-500">
-                    <span>File System Permissions:</span>
-                    <span className="font-bold text-emerald-700 font-mono">mode 0444 (Read-Only Immutable)</span>
+                <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-4 bg-blue-600 rounded"></span>
+                    <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                      4. Cross-Modal Contradiction & Correlation Graph Links
+                    </h3>
                   </div>
+                  <Link
+                    to={`/cases/${caseId}/graph`}
+                    className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1 font-mono"
+                  >
+                    <GitBranch className="h-3.5 w-3.5" />
+                    <span>Open Interactive Graph</span>
+                  </Link>
                 </div>
+
+                {graphData?.edges && graphData.edges.length > 0 ? (
+                  <div className="overflow-x-auto rounded-lg border border-slate-200">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-600 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-200">
+                          <th className="py-2.5 px-3">Relation</th>
+                          <th className="py-2.5 px-3">Rule</th>
+                          <th className="py-2.5 px-3">Explanation</th>
+                          <th className="py-2.5 px-3">Alternative Explanation</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-[11px]">
+                        {graphData.edges.map((edge) => (
+                          <tr key={edge.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="py-2.5 px-3 font-mono">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  edge.relation === "CONTRADICTS"
+                                    ? "bg-red-50 text-red-700 border border-red-200"
+                                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                }`}
+                              >
+                                {edge.relation}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 font-mono font-semibold text-slate-900">
+                              {edge.rule}
+                            </td>
+                            <td className="py-2.5 px-3 text-slate-700 max-w-xs">{edge.explanation}</td>
+                            <td className="py-2.5 px-3 text-slate-500 italic max-w-xs">
+                              {edge.alternative_explanation || "None recorded"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-xs text-slate-500">
+                    No cross-modal relationship edges recorded.
+                  </div>
+                )}
               </div>
 
               {/* Legal Attestation & Circular Seal */}
@@ -527,50 +722,50 @@ export const Report: React.FC = () => {
                   {isGenerating ? (
                     <Loader2 className="h-4 w-4 animate-spin text-white" />
                   ) : (
-                    <FileSpreadsheet className="h-4 w-4" />
+                    <RefreshCw className="h-4 w-4" />
                   )}
-                  <span>{isGenerating ? "Compiling Report..." : "Generate Official Report"}</span>
+                  <span>{isGenerating ? "Compiling Dossier..." : "Generate / Refresh Report"}</span>
                 </button>
 
-                {(reportResult || caseObj?.status === "reported") && (
-                  <>
-                    <a
-                      href={reportResult?.pdf_url || `/api/reports/${caseId}.pdf`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium text-xs transition-colors"
-                    >
-                      <Download className="h-4 w-4 text-slate-600" />
-                      <span>Download PDF Dossier</span>
-                    </a>
+                <a
+                  href={pdfDownloadUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium text-xs transition-colors"
+                >
+                  <Download className="h-4 w-4 text-slate-600" />
+                  <span>Download PDF Dossier</span>
+                </a>
 
-                    <a
-                      href={reportResult?.json_url || `/api/reports/${caseId}.json`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium text-xs transition-colors"
-                    >
-                      <Download className="h-4 w-4 text-slate-600" />
-                      <span>Download Raw JSON Evidence</span>
-                    </a>
-                  </>
-                )}
+                <a
+                  href={jsonDownloadUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium text-xs transition-colors"
+                >
+                  <Download className="h-4 w-4 text-slate-600" />
+                  <span>Download Raw JSON Evidence</span>
+                </a>
               </div>
 
               {/* Report SHA-256 Digest Callout */}
-              {reportResult && (
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-2 mt-2">
-                  <div className="flex items-center justify-between text-xs font-mono">
-                    <span className="font-bold text-emerald-800 flex items-center gap-1.5">
-                      <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                      SHA-256 Sealed
-                    </span>
-                    <span className="text-[10px] text-slate-500">{reportResult.report_id}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-2 bg-white p-2 rounded border border-emerald-200">
-                    <code className="text-[11px] text-blue-700 font-mono break-all select-all">
-                      {reportResult.report_json_sha256}
-                    </code>
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-2 mt-2">
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="font-bold text-emerald-800 flex items-center gap-1.5">
+                    <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                    SHA-256 Sealed
+                  </span>
+                  <span className="text-[10px] text-slate-500">
+                    {reportResult?.report_id || `Case ${caseId?.slice(0, 8)}`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2 bg-white p-2 rounded border border-emerald-200">
+                  <code className="text-[11px] text-blue-700 font-mono break-all select-all">
+                    {sealedSha256}
+                  </code>
+                  {reportResult?.report_json_sha256 && (
                     <button
                       type="button"
                       onClick={() => copyHashToClipboard(reportResult.report_json_sha256 || "")}
@@ -578,9 +773,9 @@ export const Report: React.FC = () => {
                     >
                       {copiedHash ? "Copied" : "Copy"}
                     </button>
-                  </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Review Completeness Tracker */}

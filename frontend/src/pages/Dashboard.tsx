@@ -23,6 +23,7 @@ import {
   AlertCircle,
   TrendingUp,
   Cpu,
+  Download,
 } from "lucide-react";
 import {
   api,
@@ -94,7 +95,7 @@ export const Dashboard: React.FC = () => {
     loadCaseData();
   }, [caseId]);
 
-  // Polling effect every 1.5s while analyzing
+  // Polling effect every 1.5s while analyzing (stops once correlated, in_review, reported, completed)
   useEffect(() => {
     if (!caseId || !isAnalyzing) {
       if (pollingRef.current) clearInterval(pollingRef.current);
@@ -105,7 +106,15 @@ export const Dashboard: React.FC = () => {
       try {
         const st = await api.getCaseStatus(caseId);
         setStatusInfo(st);
-        if (st.status === "completed" || (st.progress_percent ?? 0) >= 100) {
+        if (
+          st.status === "completed" ||
+          st.status === "failed" ||
+          st.status === "idle" ||
+          st.current_step?.includes("correlated") ||
+          st.current_step?.includes("in_review") ||
+          st.current_step?.includes("reported") ||
+          (st.progress_percent ?? 0) >= 100
+        ) {
           setIsAnalyzing(false);
           loadCaseData();
         }
@@ -235,7 +244,10 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* 5-Stage Status Bar */}
-        <StatusBar status={c.status || "created"} />
+        <StatusBar
+          status={c.status || "created"}
+          hasReport={c.status === "correlated" || c.status === "in_review" || c.status === "reported"}
+        />
 
         {isAnalyzing && (
           <div className="rounded-lg border border-blue-200 bg-blue-50/80 p-3 text-xs text-blue-900 flex items-center justify-between animate-pulse">
@@ -372,6 +384,56 @@ export const Dashboard: React.FC = () => {
           <span className="text-[11px] text-slate-500 block">
             {reviewedObsCount} of {observations.length} observations reviewed & audited
           </span>
+        </div>
+      </div>
+
+      {/* 4b. Forensic Findings Dossier & Verification Report CTA */}
+      <div className="bg-gradient-to-r from-blue-50/90 via-white to-slate-50 rounded-xl border border-blue-200/90 shadow-xs p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className="h-10 w-10 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <FileSpreadsheet className="h-5 w-5" />
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                Forensic Verification Report & Methodology Dossier
+              </h3>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold border border-blue-200">
+                {isAnalyzing ? "Compiling..." : "Ready"}
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
+              Full evidentiary dossier with deterministic rule traces, SHA-256 pre-check records, cross-modal contradiction graphs, and unreviewed counts.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          <Link
+            to={`/cases/${caseId}/report`}
+            className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs flex items-center gap-2 transition-colors"
+          >
+            <FileText className="h-4 w-4" />
+            <span>View / Download Forensic Report</span>
+          </Link>
+          <a
+            href={`/api/reports/${caseId}.pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="h-9 px-3 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 shadow-xs flex items-center gap-1.5 transition-colors"
+          >
+            <Download className="h-3.5 w-3.5 text-slate-500" />
+            <span>PDF</span>
+          </a>
+          <a
+            href={`/api/reports/${caseId}.json`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="h-9 px-3 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 shadow-xs flex items-center gap-1.5 transition-colors"
+          >
+            <Download className="h-3.5 w-3.5 text-slate-500" />
+            <span>JSON</span>
+          </a>
         </div>
       </div>
 

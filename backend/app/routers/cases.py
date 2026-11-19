@@ -369,19 +369,26 @@ def get_case_status(case_id: str) -> AnalysisStatusResponse:
     errors = [r["error"] for r in runs if r["error"]]
     st = case_row["status"]
 
+    run_statuses = [r["status"] for r in runs]
+    all_runs_finished = bool(run_statuses) and all(s in ("done", "failed", "skipped_missing_model") for s in run_statuses)
+
     progress = 0.0
     if st == "created":
         progress = 0.0
     elif st == "ingested":
         progress = 20.0
     elif st == "analyzing":
-        progress = 50.0
-    elif st in ("analyzed", "correlated", "in_review", "reported"):
+        progress = 90.0 if all_runs_finished else 50.0
+    elif st in ("analyzed", "correlated", "in_review", "reported", "completed"):
         progress = 100.0
+    elif st == "failed":
+        progress = 100.0
+
+    is_completed = st in ("correlated", "in_review", "reported", "completed") or (all_runs_finished and st != "analyzing")
 
     return AnalysisStatusResponse(
         case_id=case_id,
-        status="completed" if st in ("correlated", "in_review", "reported") else ("running" if st == "analyzing" else "idle"),
+        status="completed" if is_completed else ("failed" if st == "failed" else ("running" if st == "analyzing" else "idle")),
         progress_percent=progress,
         current_step=f"Case status: {st}",
         errors=errors
@@ -602,6 +609,13 @@ def get_audit(case_id: str) -> Dict[str, Any]:
         "verification": verification,
         "entries": rows
     }
+
+
+@router.get("/cases/{case_id}/report", response_model=ReportResponse)
+def get_case_report(case_id: str) -> ReportResponse:
+    """Retrieves or creates the latest report for the given case."""
+    from backend.app.routers.reports import get_or_build_case_report
+    return get_or_build_case_report(case_id=case_id)
 
 
 @router.post("/cases/{case_id}/report", response_model=ReportResponse)

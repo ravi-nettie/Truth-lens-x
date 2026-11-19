@@ -141,6 +141,7 @@ def run_case_pipeline(case_id: str) -> Dict[str, Any]:
     """
     Executes the multimodal forensic pipeline and correlation engine for a given case.
     Transitions: (created/ingested) -> analyzing -> analyzed -> correlated.
+    Automatically generates initial report so the case is immediately ready for review/reporting.
     """
     with get_db() as conn:
         cursor = conn.cursor()
@@ -163,292 +164,351 @@ def run_case_pipeline(case_id: str) -> Dict[str, Any]:
     collected_transcripts: List[str] = []
     all_runs: List[Dict[str, Any]] = []
 
-    # Stage 1: Analyze Media Items (Image, Video, Audio)
-    media_evidence = [e for e in evidence_items if e.get("kind") in ("image", "video", "audio")]
-    text_evidence = [e for e in evidence_items if e.get("kind") in ("text", "caption")]
+    try:
+        # Stage 1: Analyze Media Items (Image, Video, Audio)
+        media_evidence = [e for e in evidence_items if e.get("kind") in ("image", "video", "audio")]
+        text_evidence = [e for e in evidence_items if e.get("kind") in ("text", "caption")]
 
-    for ev in media_evidence:
-        kind = ev.get("kind")
-        ev_id = ev["id"]
+        for ev in media_evidence:
+            kind = ev.get("kind")
+            ev_id = ev["id"]
 
-        artifact_dir = settings.artifacts_dir / case_id / ev_id
-        artifact_dir.mkdir(parents=True, exist_ok=True)
-        ctx = AnalysisContext(
-            case_id=case_id,
-            work_dir=str(settings.tmp_dir),
-            artifact_dir=str(artifact_dir),
-            config={}
-        )
+            artifact_dir = settings.artifacts_dir / case_id / ev_id
+            artifact_dir.mkdir(parents=True, exist_ok=True)
+            ctx = AnalysisContext(
+                case_id=case_id,
+                work_dir=str(settings.tmp_dir),
+                artifact_dir=str(artifact_dir),
+                config={}
+            )
 
-        if kind == "image":
-            run_id = f"run_img_{uuid4().hex[:8]}"
-            started = datetime.now(timezone.utc).isoformat()
+            if kind == "image":
+                run_id = f"run_img_{uuid4().hex[:8]}"
+                started = datetime.now(timezone.utc).isoformat()
+                try:
+                    res = image_analyzer.analyze(ev, ctx)
+                except Exception as e:
+                    res = AnalyzerResult(status="failed", error=str(e), tool_version="1.0.0")
+                    pipeline_errors.append(f"Image {ev_id}: {e}")
+                finished = datetime.now(timezone.utc).isoformat()
+                save_analysis_run(run_id, ev_id, "image_analyzer", "1.0.0", res.status, res.error, started, finished)
+                persist_analyzer_result(case_id, ev_id, run_id, res)
+                all_runs.append({"id": run_id, "analyzer": "image_analyzer", "status": res.status, "started_at": started, "finished_at": finished})
+
+            elif kind == "video":
+                # 1. Video Analyzer (probe, scene cuts, pts, frames)
+                run_id_v = f"run_vid_{uuid4().hex[:8]}"
+                started_v = datetime.now(timezone.utc).isoformat()
+                try:
+                    res_v = video_analyzer.analyze(ev, ctx)
+                except Exception as e:
+                    res_v = AnalyzerResult(status="failed", error=str(e), tool_version="1.0.0")
+                    pipeline_errors.append(f"Video {ev_id}: {e}")
+                finished_v = datetime.now(timezone.utc).isoformat()
+                save_analysis_run(run_id_v, ev_id, "video_analyzer", "1.0.0", res_v.status, res_v.error, started_v, finished_v)
+                persist_analyzer_result(case_id, ev_id, run_id_v, res_v)
+                all_runs.append({"id": run_id_v, "analyzer": "video_analyzer", "status": res_v.status, "started_at": started_v, "finished_at": finished_v})
+
+                # 2. Audio Analyzer on Video (extract mono audio, spectrogram, acoustic discontinuities, transcript)
+                run_id_a = f"run_aud_{uuid4().hex[:8]}"
+                started_a = datetime.now(timezone.utc).isoformat()
+                try:
+                    res_a = audio_analyzer.analyze(ev, ctx)
+                except Exception as e:
+                    res_a = AnalyzerResult(status="failed", error=str(e), tool_version="1.0.0")
+                    pipeline_errors.append(f"Video Audio {ev_id}: {e}")
+                finished_a = datetime.now(timezone.utc).isoformat()
+                save_analysis_run(run_id_a, ev_id, "audio_analyzer", "1.0.0", res_a.status, res_a.error, started_a, finished_a)
+                persist_analyzer_result(case_id, ev_id, run_id_a, res_a)
+                all_runs.append({"id": run_id_a, "analyzer": "audio_analyzer", "status": res_a.status, "started_at": started_a, "finished_at": finished_a})
+
+                # Harvest transcript if generated
+                tr_text = res_a.metadata.get("transcription", {}).get("full_text")
+                if tr_text:
+                    collected_transcripts.append(tr_text)
+
+            elif kind == "audio":
+                run_id = f"run_aud_{uuid4().hex[:8]}"
+                started = datetime.now(timezone.utc).isoformat()
+                try:
+                    res = audio_analyzer.analyze(ev, ctx)
+                except Exception as e:
+                    res = AnalyzerResult(status="failed", error=str(e), tool_version="1.0.0")
+                    pipeline_errors.append(f"Audio {ev_id}: {e}")
+                finished = datetime.now(timezone.utc).isoformat()
+                save_analysis_run(run_id, ev_id, "audio_analyzer", "1.0.0", res.status, res.error, started, finished)
+                persist_analyzer_result(case_id, ev_id, run_id, res)
+                all_runs.append({"id": run_id, "analyzer": "audio_analyzer", "status": res.status, "started_at": started, "finished_at": finished})
+
+                tr_text = res.metadata.get("transcription", {}).get("full_text")
+                if tr_text:
+                    collected_transcripts.append(tr_text)
+
+            # Provenance: C2PA Content Credentials Manifest Check
             try:
-                res = image_analyzer.analyze(ev, ctx)
+                stored_p_str = ev.get("stored_path", "")
+                if stored_p_str:
+                    p_obj = Path(stored_p_str)
+                    if not p_obj.is_absolute():
+                        p_obj = (settings.data_path.parent / p_obj).resolve()
+                    if p_obj.exists():
+                        c2pa_obs, c2pa_events, c2pa_meta = inspect_c2pa(ev_id, case_id, p_obj, Modality(kind))
+                        if c2pa_obs:
+                            run_id_c2pa = f"run_c2pa_{uuid4().hex[:8]}"
+                            now_c2pa = datetime.now(timezone.utc).isoformat()
+                            save_analysis_run(run_id_c2pa, ev_id, "c2pa_provenance_inspector", "1.0.0", "done", None, now_c2pa, now_c2pa)
+                            persist_analyzer_result(case_id, ev_id, run_id_c2pa, AnalyzerResult(status="done", observations=c2pa_obs, tool_version="1.0.0"))
             except Exception as e:
-                res = AnalyzerResult(status="failed", error=str(e), tool_version="1.0.0")
-                pipeline_errors.append(f"Image {ev_id}: {e}")
-            finished = datetime.now(timezone.utc).isoformat()
-            save_analysis_run(run_id, ev_id, "image_analyzer", "1.0.0", res.status, res.error, started, finished)
-            persist_analyzer_result(case_id, ev_id, run_id, res)
-            all_runs.append({"id": run_id, "analyzer": "image_analyzer", "status": res.status, "started_at": started, "finished_at": finished})
+                pipeline_errors.append(f"C2PA check {ev_id}: {e}")
 
-        elif kind == "video":
-            # 1. Video Analyzer (probe, scene cuts, pts, frames)
-            run_id_v = f"run_vid_{uuid4().hex[:8]}"
-            started_v = datetime.now(timezone.utc).isoformat()
+            # Optional Pretrained Classifier Plug-in (Guarded by ENABLE_OPTIONAL_MODELS)
             try:
-                res_v = video_analyzer.analyze(ev, ctx)
+                if is_detector_enabled():
+                    det_st, det_obs, det_telemetry = run_optional_detector(ev, ctx, Modality(kind))
+                    if det_obs:
+                        run_id_det = f"run_det_{uuid4().hex[:8]}"
+                        now_det = datetime.now(timezone.utc).isoformat()
+                        save_analysis_run(run_id_det, ev_id, "pretrained_detector_plugin", "1.0.0", det_st, None, now_det, now_det)
+                        persist_analyzer_result(case_id, ev_id, run_id_det, AnalyzerResult(status=det_st, observations=[det_obs], tool_version="1.0.0"))
             except Exception as e:
-                res_v = AnalyzerResult(status="failed", error=str(e), tool_version="1.0.0")
-                pipeline_errors.append(f"Video {ev_id}: {e}")
-            finished_v = datetime.now(timezone.utc).isoformat()
-            save_analysis_run(run_id_v, ev_id, "video_analyzer", "1.0.0", res_v.status, res_v.error, started_v, finished_v)
-            persist_analyzer_result(case_id, ev_id, run_id_v, res_v)
-            all_runs.append({"id": run_id_v, "analyzer": "video_analyzer", "status": res_v.status, "started_at": started_v, "finished_at": finished_v})
+                pipeline_errors.append(f"Detector plugin {ev_id}: {e}")
 
-            # 2. Audio Analyzer on Video (extract mono audio, spectrogram, acoustic discontinuities, transcript)
-            run_id_a = f"run_aud_{uuid4().hex[:8]}"
-            started_a = datetime.now(timezone.utc).isoformat()
-            try:
-                res_a = audio_analyzer.analyze(ev, ctx)
-            except Exception as e:
-                res_a = AnalyzerResult(status="failed", error=str(e), tool_version="1.0.0")
-                pipeline_errors.append(f"Video Audio {ev_id}: {e}")
-            finished_a = datetime.now(timezone.utc).isoformat()
-            save_analysis_run(run_id_a, ev_id, "audio_analyzer", "1.0.0", res_a.status, res_a.error, started_a, finished_a)
-            persist_analyzer_result(case_id, ev_id, run_id_a, res_a)
-            all_runs.append({"id": run_id_a, "analyzer": "audio_analyzer", "status": res_a.status, "started_at": started_a, "finished_at": finished_a})
+        # If no audio transcript was harvested from media, check if a text evidence item is a transcript
+        if not collected_transcripts:
+            for ev in text_evidence:
+                orig = (ev.get("original_name") or "").lower()
+                note = (ev.get("source_note") or "").lower()
+                if "transcript" in orig or "transcript" in note:
+                    p = Path(ev["stored_path"])
+                    if not p.is_absolute():
+                        p = (settings.data_path.parent / p).resolve()
+                    if p.exists():
+                        try:
+                            with open(p, "r", encoding="utf-8", errors="ignore") as f:
+                                t_content = f.read()
+                                if t_content.strip():
+                                    collected_transcripts.append(t_content.strip())
+                        except Exception:
+                            pass
 
-            # Harvest transcript if generated
-            tr_text = res_a.metadata.get("transcription", {}).get("full_text")
-            if tr_text:
-                collected_transcripts.append(tr_text)
+        # Combined transcript text for text comparison
+        combined_transcript_text = " ".join(collected_transcripts)
 
-        elif kind == "audio":
-            run_id = f"run_aud_{uuid4().hex[:8]}"
-            started = datetime.now(timezone.utc).isoformat()
-            try:
-                res = audio_analyzer.analyze(ev, ctx)
-            except Exception as e:
-                res = AnalyzerResult(status="failed", error=str(e), tool_version="1.0.0")
-                pipeline_errors.append(f"Audio {ev_id}: {e}")
-            finished = datetime.now(timezone.utc).isoformat()
-            save_analysis_run(run_id, ev_id, "audio_analyzer", "1.0.0", res.status, res.error, started, finished)
-            persist_analyzer_result(case_id, ev_id, run_id, res)
-            all_runs.append({"id": run_id, "analyzer": "audio_analyzer", "status": res.status, "started_at": started, "finished_at": finished})
-
-            tr_text = res.metadata.get("transcription", {}).get("full_text")
-            if tr_text:
-                collected_transcripts.append(tr_text)
-
-        # Provenance: C2PA Content Credentials Manifest Check
-        stored_p_str = ev.get("stored_path", "")
-        if stored_p_str:
-            p_obj = Path(stored_p_str)
-            if not p_obj.is_absolute():
-                p_obj = (settings.data_path.parent / p_obj).resolve()
-            if p_obj.exists():
-                c2pa_obs, c2pa_events, c2pa_meta = inspect_c2pa(ev_id, case_id, p_obj, Modality(kind))
-                if c2pa_obs:
-                    run_id_c2pa = f"run_c2pa_{uuid4().hex[:8]}"
-                    now_c2pa = datetime.now(timezone.utc).isoformat()
-                    save_analysis_run(run_id_c2pa, ev_id, "c2pa_provenance_inspector", "1.0.0", "done", None, now_c2pa, now_c2pa)
-                    persist_analyzer_result(case_id, ev_id, run_id_c2pa, AnalyzerResult(status="done", observations=c2pa_obs, tool_version="1.0.0"))
-
-        # Optional Pretrained Classifier Plug-in (Guarded by ENABLE_OPTIONAL_MODELS)
-        if is_detector_enabled():
-            det_st, det_obs, det_telemetry = run_optional_detector(ev, ctx, Modality(kind))
-            if det_obs:
-                run_id_det = f"run_det_{uuid4().hex[:8]}"
-                now_det = datetime.now(timezone.utc).isoformat()
-                save_analysis_run(run_id_det, ev_id, "pretrained_detector_plugin", "1.0.0", det_st, None, now_det, now_det)
-                persist_analyzer_result(case_id, ev_id, run_id_det, AnalyzerResult(status=det_st, observations=[det_obs], tool_version="1.0.0"))
-
-    # If no audio transcript was harvested from media, check if a text evidence item is a transcript
-    if not collected_transcripts:
+        # Stage 2: Analyze Text / Caption Evidence
         for ev in text_evidence:
-            orig = (ev.get("original_name") or "").lower()
-            note = (ev.get("source_note") or "").lower()
-            if "transcript" in orig or "transcript" in note:
-                p = Path(ev["stored_path"])
-                if p.exists():
-                    try:
-                        with open(p, "r", encoding="utf-8", errors="ignore") as f:
-                            t_content = f.read()
-                            if t_content.strip():
-                                collected_transcripts.append(t_content.strip())
-                    except Exception:
-                        pass
+            ev_id = ev["id"]
+            run_id = f"run_txt_{uuid4().hex[:8]}"
+            started = datetime.now(timezone.utc).isoformat()
 
-    # Combined transcript text for text comparison
-    combined_transcript_text = " ".join(collected_transcripts)
-
-    # Stage 2: Analyze Text / Caption Evidence
-    for ev in text_evidence:
-        ev_id = ev["id"]
-        run_id = f"run_txt_{uuid4().hex[:8]}"
-        started = datetime.now(timezone.utc).isoformat()
-
-        artifact_dir = settings.artifacts_dir / case_id / ev_id
-        artifact_dir.mkdir(parents=True, exist_ok=True)
-        ctx = AnalysisContext(
-            case_id=case_id,
-            work_dir=str(settings.tmp_dir),
-            artifact_dir=str(artifact_dir),
-            config={"transcript": combined_transcript_text}
-        )
-
-        try:
-            res = text_analyzer.analyze(ev, ctx)
-        except Exception as e:
-            res = AnalyzerResult(status="failed", error=str(e), tool_version="1.0.0")
-            pipeline_errors.append(f"Text {ev_id}: {e}")
-        finished = datetime.now(timezone.utc).isoformat()
-        save_analysis_run(run_id, ev_id, "text_analyzer", "1.0.0", res.status, res.error, started, finished)
-        persist_analyzer_result(case_id, ev_id, run_id, res)
-        all_runs.append({"id": run_id, "analyzer": "text_analyzer", "status": res.status, "started_at": started, "finished_at": finished})
-
-    # Transition status: analyzing -> analyzed
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("UPDATE cases SET status = 'analyzed' WHERE id = ?", (case_id,))
-
-    # Stage 3: Execute Cross-Modal Correlation Engine (Rules R1 - R8)
-    # Query all active observations and claims for this case
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM observations WHERE case_id = ?", (case_id,))
-        obs_rows = cursor.fetchall()
-
-        cursor.execute("SELECT * FROM claims WHERE case_id = ?", (case_id,))
-        claim_rows = cursor.fetchall()
-
-        cursor.execute("SELECT * FROM review_decisions WHERE case_id = ?", (case_id,))
-        review_rows = [dict(r) for r in cursor.fetchall()]
-
-    all_obs: List[Observation] = []
-    for r in obs_rows:
-        all_obs.append(
-            Observation(
-                id=r["id"],
-                case_id=r["case_id"],
-                evidence_id=r["evidence_id"],
-                modality=Modality(r["modality"]),
-                indicator=r["indicator"],
-                method=r["method"],
-                summary=r["summary"],
-                explanation=r["explanation"],
-                alternative_explanation=r["alternative_explanation"] or "",
-                evidence_strength=Strength(r["evidence_strength"]),
-                model_score=r["model_score"],
-                model_calibrated=bool(r["model_calibrated"]),
-                model_name=r["model_name"],
-                region=json.loads(r["region_json"]) if r["region_json"] else None,
-                time_start_ms=r["time_start_ms"],
-                time_end_ms=r["time_end_ms"],
-                artifact_ids=json.loads(r["artifact_ids_json"] or "[]"),
-                details=json.loads(r["details_json"] or "{}"),
-                limitations=r["limitations"] or ""
+            artifact_dir = settings.artifacts_dir / case_id / ev_id
+            artifact_dir.mkdir(parents=True, exist_ok=True)
+            ctx = AnalysisContext(
+                case_id=case_id,
+                work_dir=str(settings.tmp_dir),
+                artifact_dir=str(artifact_dir),
+                config={"transcript": combined_transcript_text}
             )
-        )
 
-    all_claims: List[Claim] = []
-    for r in claim_rows:
-        all_claims.append(
-            Claim(
-                id=r["id"],
-                case_id=r["case_id"],
-                source_evidence_id=r["source_evidence_id"],
-                source_kind=r["source_kind"],
-                text=r["text"],
-                claim_type=r["claim_type"],
-                value=json.loads(r["value_json"] or "{}"),
-                time_start_ms=r["time_start_ms"],
-                time_end_ms=r["time_end_ms"]
-            )
-        )
+            try:
+                res = text_analyzer.analyze(ev, ctx)
+            except Exception as e:
+                res = AnalyzerResult(status="failed", error=str(e), tool_version="1.0.0")
+                pipeline_errors.append(f"Text {ev_id}: {e}")
+            finished = datetime.now(timezone.utc).isoformat()
+            save_analysis_run(run_id, ev_id, "text_analyzer", "1.0.0", res.status, res.error, started, finished)
+            persist_analyzer_result(case_id, ev_id, run_id, res)
+            all_runs.append({"id": run_id, "analyzer": "text_analyzer", "status": res.status, "started_at": started, "finished_at": finished})
 
-    # Evaluate Rules R1 - R8
-    correlation_edges = evaluate_correlation_rules(
-        case_id=case_id,
-        evidence_list=evidence_items,
-        observations=all_obs,
-        claims=all_claims
-    )
+        # Transition status: analyzing -> analyzed
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE cases SET status = 'analyzed' WHERE id = ?", (case_id,))
 
-    # Build Unified Provenance Timeline
-    timeline_res = build_case_timeline(
-        case_id=case_id,
-        evidence_list=evidence_items,
-        observations=all_obs,
-        claims=all_claims,
-        analysis_runs=all_runs,
-        review_decisions=review_rows
-    )
+        # Stage 3: Execute Cross-Modal Correlation Engine (Rules R1 - R8)
+        # Query all active observations and claims for this case
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM observations WHERE case_id = ?", (case_id,))
+            obs_rows = cursor.fetchall()
 
-    # Compute Case Review Priority
-    priority_res = compute_case_review_priority(all_obs, correlation_edges)
+            cursor.execute("SELECT * FROM claims WHERE case_id = ?", (case_id,))
+            claim_rows = cursor.fetchall()
 
-    # Persist Graph Edges, Timeline Events, and Update Case Status
-    with get_db() as conn:
-        cursor = conn.cursor()
+            cursor.execute("SELECT * FROM review_decisions WHERE case_id = ?", (case_id,))
+            review_rows = [dict(r) for r in cursor.fetchall()]
 
-        # Persist Graph Edges
-        cursor.execute("DELETE FROM graph_edges WHERE case_id = ?", (case_id,))
-        for edge in correlation_edges:
-            cursor.execute(
-                """
-                INSERT INTO graph_edges
-                (id, case_id, src_id, dst_id, relation, rule, evidence_observation_ids_json, explanation, alternative_explanation, strength)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    edge.id, case_id, edge.src_id, edge.dst_id, edge.relation, edge.rule,
-                    json.dumps(edge.evidence_observation_ids), edge.explanation,
-                    edge.alternative_explanation, edge.strength.value
+        all_obs: List[Observation] = []
+        for r in obs_rows:
+            all_obs.append(
+                Observation(
+                    id=r["id"],
+                    case_id=r["case_id"],
+                    evidence_id=r["evidence_id"],
+                    modality=Modality(r["modality"]),
+                    indicator=r["indicator"],
+                    method=r["method"],
+                    summary=r["summary"],
+                    explanation=r["explanation"],
+                    alternative_explanation=r["alternative_explanation"] or "",
+                    evidence_strength=Strength(r["evidence_strength"]),
+                    model_score=r["model_score"],
+                    model_calibrated=bool(r["model_calibrated"]),
+                    model_name=r["model_name"],
+                    region=json.loads(r["region_json"]) if r["region_json"] else None,
+                    time_start_ms=r["time_start_ms"],
+                    time_end_ms=r["time_end_ms"],
+                    artifact_ids=json.loads(r["artifact_ids_json"] or "[]"),
+                    details=json.loads(r["details_json"] or "{}"),
+                    limitations=r["limitations"] or ""
                 )
             )
 
-        # Persist Timeline Events
-        cursor.execute("DELETE FROM timeline_events WHERE case_id = ?", (case_id,))
-        for evt in timeline_res.events:
-            cursor.execute(
-                """
-                INSERT INTO timeline_events
-                (id, case_id, ts, media_time_ms, kind, ref_id, label)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (evt.id, case_id, evt.ts, evt.media_time_ms, evt.kind, evt.ref_id, evt.label)
+        all_claims: List[Claim] = []
+        for r in claim_rows:
+            all_claims.append(
+                Claim(
+                    id=r["id"],
+                    case_id=r["case_id"],
+                    source_evidence_id=r["source_evidence_id"],
+                    source_kind=r["source_kind"],
+                    text=r["text"],
+                    claim_type=r["claim_type"],
+                    value=json.loads(r["value_json"] or "{}"),
+                    time_start_ms=r["time_start_ms"],
+                    time_end_ms=r["time_end_ms"]
+                )
             )
 
-        # Update case status to correlated
-        cursor.execute("UPDATE cases SET status = 'correlated' WHERE id = ?", (case_id,))
+        # Evaluate Rules R1 - R8
+        try:
+            correlation_edges = evaluate_correlation_rules(
+                case_id=case_id,
+                evidence_list=evidence_items,
+                observations=all_obs,
+                claims=all_claims
+            )
+        except Exception as e:
+            pipeline_errors.append(f"Correlation rules: {e}")
+            correlation_edges = []
 
-        # Record audit log
-        append_audit(
-            case_id=case_id,
-            actor="system",
-            action="RUN_ANALYSIS",
-            target=case_id,
-            details={
-                "evidence_processed": len(evidence_items),
-                "observations_count": len(all_obs),
-                "claims_count": len(all_claims),
-                "edges_count": len(correlation_edges),
-                "review_priority": priority_res["review_priority"],
-                "errors": pipeline_errors
-            },
-            conn=conn
-        )
+        # Build Unified Provenance Timeline
+        try:
+            timeline_res = build_case_timeline(
+                case_id=case_id,
+                evidence_list=evidence_items,
+                observations=all_obs,
+                claims=all_claims,
+                analysis_runs=all_runs,
+                review_decisions=review_rows
+            )
+        except Exception as e:
+            pipeline_errors.append(f"Timeline builder: {e}")
+            from shared.schemas import TimelineResponse
+            timeline_res = TimelineResponse(case_id=case_id, events=[])
 
-    return {
-        "case_id": case_id,
-        "status": "correlated",
-        "evidence_count": len(evidence_items),
-        "observations_count": len(all_obs),
-        "claims_count": len(all_claims),
-        "edges_count": len(correlation_edges),
-        "review_priority": priority_res,
-        "errors": pipeline_errors
-    }
+        # Compute Case Review Priority
+        try:
+            priority_res = compute_case_review_priority(all_obs, correlation_edges)
+        except Exception as e:
+            pipeline_errors.append(f"Review priority: {e}")
+            priority_res = {"review_priority": "low", "formula": "fallback"}
+
+        # Persist Graph Edges, Timeline Events, and Update Case Status
+        with get_db() as conn:
+            cursor = conn.cursor()
+
+            # Persist Graph Edges
+            cursor.execute("DELETE FROM graph_edges WHERE case_id = ?", (case_id,))
+            for edge in correlation_edges:
+                cursor.execute(
+                    """
+                    INSERT INTO graph_edges
+                    (id, case_id, src_id, dst_id, relation, rule, evidence_observation_ids_json, explanation, alternative_explanation, strength)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        edge.id, case_id, edge.src_id, edge.dst_id, edge.relation, edge.rule,
+                        json.dumps(edge.evidence_observation_ids), edge.explanation,
+                        edge.alternative_explanation, edge.strength.value
+                    )
+                )
+
+            # Persist Timeline Events
+            cursor.execute("DELETE FROM timeline_events WHERE case_id = ?", (case_id,))
+            for evt in timeline_res.events:
+                cursor.execute(
+                    """
+                    INSERT INTO timeline_events
+                    (id, case_id, ts, media_time_ms, kind, ref_id, label)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (evt.id, case_id, evt.ts, evt.media_time_ms, evt.kind, evt.ref_id, evt.label)
+                )
+
+            # Update case status to correlated
+            cursor.execute("UPDATE cases SET status = 'correlated' WHERE id = ?", (case_id,))
+
+            # Record audit log
+            append_audit(
+                case_id=case_id,
+                actor="system",
+                action="RUN_ANALYSIS",
+                target=case_id,
+                details={
+                    "evidence_processed": len(evidence_items),
+                    "observations_count": len(all_obs),
+                    "claims_count": len(all_claims),
+                    "edges_count": len(correlation_edges),
+                    "review_priority": priority_res.get("review_priority", "low"),
+                    "errors": pipeline_errors
+                },
+                conn=conn
+            )
+
+        # Auto-compile initial JSON + PDF report as soon as CORRELATE finishes
+        try:
+            from backend.app.reporting.build_json import build_report_json
+            from backend.app.reporting.build_pdf import build_pdf_report
+            initial_rep_id = f"rep_{uuid4().hex[:12]}"
+            rep_data = build_report_json(case_id=case_id, report_id=initial_rep_id)
+            build_pdf_report(rep_data)
+            with get_db() as conn:
+                append_audit(
+                    case_id=case_id,
+                    actor="system",
+                    action="AUTO_GENERATE_REPORT",
+                    target=initial_rep_id,
+                    details={
+                        "report_id": initial_rep_id,
+                        "report_json_sha256": rep_data.get("report_json_sha256"),
+                        "unreviewed_count": rep_data.get("case_summary", {}).get("unreviewed_count", 0),
+                    },
+                    conn=conn
+                )
+        except Exception as rep_err:
+            pipeline_errors.append(f"Auto-generate report: {rep_err}")
+
+        return {
+            "case_id": case_id,
+            "status": "correlated",
+            "evidence_count": len(evidence_items),
+            "observations_count": len(all_obs),
+            "claims_count": len(all_claims),
+            "edges_count": len(correlation_edges),
+            "review_priority": priority_res,
+            "errors": pipeline_errors
+        }
+
+    except Exception as fatal_err:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE cases SET status = 'failed' WHERE id = ?", (case_id,))
+            append_audit(
+                case_id=case_id,
+                actor="system",
+                action="PIPELINE_FATAL_ERROR",
+                target=case_id,
+                details={"error": str(fatal_err)},
+                conn=conn
+            )
+        return {"status": "failed", "error": str(fatal_err), "case_id": case_id}

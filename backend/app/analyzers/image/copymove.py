@@ -229,6 +229,27 @@ def analyze_copymove(
             primary_cluster = clusters[0]
             inliers = primary_cluster["inliers_count"]
             src_box = primary_cluster["src_bbox"]
+            dst_box = primary_cluster["dst_bbox"]
+
+            # Compute supporting spatial and geometric measurements
+            src_center_x = src_box["x"] + src_box["w"] / 2.0
+            src_center_y = src_box["y"] + src_box["h"] / 2.0
+            dst_center_x = dst_box["x"] + dst_box["w"] / 2.0
+            dst_center_y = dst_box["y"] + dst_box["h"] / 2.0
+            cluster_dist_px = round(float(np.hypot(src_center_x - dst_center_x, src_center_y - dst_center_y)), 1)
+            img_w = float(img_np.shape[1]) * scale_factor
+            img_h = float(img_np.shape[0]) * scale_factor
+            img_diag_px = round(float(np.hypot(img_w, img_h)), 1)
+            norm_dist_pct = round(float(cluster_dist_px / img_diag_px * 100), 1) if img_diag_px > 0 else 0.0
+            inlier_ratio = round(float(inliers / max(1, stats.get("candidate_matches", 1))), 3)
+
+            details["cluster_distance_px"] = cluster_dist_px
+            details["normalized_distance_pct"] = norm_dist_pct
+            details["inlier_ratio"] = inlier_ratio
+            details["src_bbox"] = src_box
+            details["dst_bbox"] = dst_box
+            details["cluster_a_center"] = [round(src_center_x, 1), round(src_center_y, 1)]
+            details["cluster_b_center"] = [round(dst_center_x, 1), round(dst_center_y, 1)]
 
             region = Region(
                 x=src_box["x"],
@@ -247,8 +268,11 @@ def analyze_copymove(
 
             summary = f"Potential copy-move duplication detected ({inliers} geometric inliers)"
             explanation = (
-                f"Feature matching identified a cluster of {inliers} ORB keypoints sharing consistent "
-                f"geometric affine transformation across separated spatial regions of the image frame."
+                f"Feature matching identified {inliers} ORB keypoints sharing consistent affine transformation "
+                f"(inlier ratio: {inlier_ratio}) between Cluster A (x={src_box['x']}, y={src_box['y']}, "
+                f"w={src_box['w']}, h={src_box['h']}) and Cluster B (x={dst_box['x']}, y={dst_box['y']}, "
+                f"w={dst_box['w']}, h={dst_box['h']}). Centroid separation: {cluster_dist_px} px "
+                f"({norm_dist_pct}% of diagonal)."
             )
             alt_explanation = (
                 "Repetitive natural textures, periodic architectural patterns (such as brick walls, window grids, "

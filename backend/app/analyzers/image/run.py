@@ -115,7 +115,8 @@ def analyze(evidence: Dict[str, Any], ctx: AnalysisContext) -> AnalyzerResult:
                 case_id,
                 image_path,
                 artifact_dir,
-                working_image=working_copy
+                working_image=working_copy,
+                original_format=raw_img.format
             )
             # If downscaled, note in details/limitations
             if metadata["downscaled_for_analysis"]:

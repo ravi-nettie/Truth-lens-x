@@ -1,0 +1,69 @@
+{
+  "evaluation_meta": {
+    "timestamp": "2026-11-19T20:43:50.702948+00:00",
+    "manifest": "..\\samples\\evaluation\\small_manifest.csv",
+    "total_samples": 28,
+    "elapsed_seconds": 6.38
+  },
+  "classification_metrics": {
+    "confusion_matrix": {
+      "TP": 7,
+      "TN": 16,
+      "FP": 0,
+      "FN": 5
+    },
+    "accuracy": 0.8214,
+    "precision": 1.0,
+    "recall": 0.5833,
+    "f1_score": 0.7368,
+    "false_positive_rate": 0.0,
+    "inconclusive_rate": 0.0
+  },
+  "system_performance": {
+    "latency_ms": {
+      "mean": 225.94,
+      "median": 70.46,
+      "p95": 753.89,
+      "min": 20.38,
+      "max": 1042.27
+    },
+    "throughput_samples_per_sec": 4.39,
+    "peak_ram_mb": 23.83,
+    "peak_gpu_mb": "N/A (CPU-first offline engine)",
+    "job_failure_rate": 0.0,
+    "evidence_hash_immutability_verified": true,
+    "database_persistence_correctness": true
+  },
+  "modality_breakdown": {
+    "image": {
+      "total": 20,
+      "tp": 5,
+      "tn": 12,
+      "fp": 0,
+      "fn": 3,
+      "accuracy": 0.85,
+      "recall": 0.625,
+      "fpr": 0.0
+    },
+    "video": {
+      "total": 4,
+      "tp": 0,
+      "tn": 2,
+      "fp": 0,
+      "fn": 2,
+      "accuracy": 0.5,
+      "recall": 0.0,
+      "fpr": 0.0
+    },
+    "audio": {
+      "total": 4,
+      "tp": 2,
+      "tn": 2,
+      "fp": 0,
+      "fn": 0,
+      "accuracy": 1.0,
+      "recall": 1.0,
+      "fpr": 0.0
+    }
+  }
+}

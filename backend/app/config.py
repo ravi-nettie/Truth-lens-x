@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     WHISPER_MODEL: str = "tiny.en"
     WHISPER_COMPUTE_TYPE: str = "int8"
     ENABLE_OPTIONAL_MODELS: bool = False
+    ENABLE_AI_ORIGIN_CLASSIFIER: bool = True
+    AI_IMAGE_MODEL_ID: str = "Organika/sdxl-detector"
 
     # Storage paths
     DATA_DIR: str = "./data"
@@ -57,12 +59,17 @@ class Settings(BaseSettings):
     def models_path(self) -> Path:
         return Path(self.MODELS_DIR).resolve()
 
+    @property
+    def ai_image_detector_dir(self) -> Path:
+        return self.models_path / "ai_image_detector"
+
     def ensure_dirs(self) -> None:
         """Ensures core storage directories exist on startup."""
         self.evidence_dir.mkdir(parents=True, exist_ok=True)
         self.artifacts_dir.mkdir(parents=True, exist_ok=True)
         self.tmp_dir.mkdir(parents=True, exist_ok=True)
         self.models_path.mkdir(parents=True, exist_ok=True)
+        self.ai_image_detector_dir.mkdir(parents=True, exist_ok=True)
 
 
 settings = Settings()
