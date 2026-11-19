@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  truthlens-x:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: truthlens-x:latest
+    container_name: truthlens-x
+    ports:
+      - "8000:8000"
+    environment:
+      - DATA_DIR=/app/data
+      - MODELS_DIR=/app/models
+      - ENABLE_OPTIONAL_MODELS=false
+      - VITE_USE_MOCKS=false
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

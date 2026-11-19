@@ -1,0 +1,13 @@
+{
+  "source": "precomputed from the same file",
+  "description": "Precomputed reference transcript for offline demo fallback",
+  "full_text": "Friday afternoon, about three hundred people, no incident",
+  "segments": [
+    {
+      "id": "seg_001",
+      "start_ms": 0,
+      "end_ms": 7400,
+      "text": "Friday afternoon, about three hundred people, no incident"
+    }
+  ]
+}

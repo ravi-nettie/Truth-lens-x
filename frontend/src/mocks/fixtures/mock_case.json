@@ -1,0 +1,86 @@
+{
+  "case": {
+    "id": "case_campus_tech_fest_2026",
+    "title": "Campus Tech Fest Attendance Verification",
+    "description": "Multimodal forensic verification of attendance figures, stage speeches, and crowd continuity for Campus Tech Fest 2026.",
+    "created_at": "2026-11-19T08:00:00Z",
+    "updated_at": "2026-11-19T09:30:00Z",
+    "evidence_count": 4,
+    "status": "open"
+  },
+  "evidence_items": [
+    {
+      "id": "ev_video_quad_01",
+      "case_id": "case_campus_tech_fest_2026",
+      "filename": "campus_fest_quad.mp4",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "modality": "video",
+      "mime_type": "video/mp4",
+      "file_size_bytes": 15482910,
+      "file_path": "data/evidence/case_campus_tech_fest_2026/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.mp4",
+      "created_at": "2026-11-19T08:05:00Z",
+      "metadata": {
+        "duration_sec": 15.2,
+        "width": 1920,
+        "height": 1080,
+        "fps": 30.0,
+        "codec": "h264"
+      }
+    },
+    {
+      "id": "ev_image_poster_02",
+      "case_id": "case_campus_tech_fest_2026",
+      "filename": "crowd_poster.jpg",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "modality": "image",
+      "mime_type": "image/jpeg",
+      "file_size_bytes": 3241080,
+      "file_path": "data/evidence/case_campus_tech_fest_2026/4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945.jpg",
+      "created_at": "2026-11-19T08:10:00Z",
+      "metadata": {
+        "width": 3840,
+        "height": 2160,
+        "format": "JPEG",
+        "exif": {
+          "Make": "Canon",
+          "Model": "EOS R6",
+          "DateTimeOriginal": "2026-11-18 14:32:00"
+        }
+      }
+    },
+    {
+      "id": "ev_audio_speech_03",
+      "case_id": "case_campus_tech_fest_2026",
+      "filename": "speech_recording.wav",
+      "sha256": "a8a613238d813514e107327bed2bebae829f10730e0f3d54e2ae2497152e8035",
+      "modality": "audio",
+      "mime_type": "audio/wav",
+      "file_size_bytes": 2646044,
+      "file_path": "data/evidence/case_campus_tech_fest_2026/a8a613238d813514e107327bed2bebae829f10730e0f3d54e2ae2497152e8035.wav",
+      "created_at": "2026-11-19T08:15:00Z",
+      "metadata": {
+        "duration_sec": 15.0,
+        "sample_rate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "ev_text_caption_04",
+      "case_id": "case_campus_tech_fest_2026",
+      "filename": "social_post.txt",
+      "sha256": "c775e7b757ede630cd0aa1113bd102661ab38829ca52a6422ab782862f268646",
+      "modality": "text",
+      "mime_type": "text/plain",
+      "file_size_bytes": 98,
+      "file_path": "data/evidence/case_campus_tech_fest_2026/c775e7b757ede630cd0aa1113bd102661ab38829ca52a6422ab782862f268646.txt",
+      "created_at": "2026-11-19T08:20:00Z",
+      "metadata": {
+        "source": "social_post",
+        "caption": "Record turnout: 3,000 attendees gathered at Main Plaza for Tech Fest 2026!"
+      }
+    }
+  ],
+  "observation_count": 4,
+  "claim_count": 3,
+  "contradiction_count": 1
+}

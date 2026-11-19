@@ -1,0 +1,59 @@
+{
+  "case_id": "case_campus_tech_fest_2026",
+  "events": [
+    {
+      "id": "evt_exif_01",
+      "case_id": "case_campus_tech_fest_2026",
+      "ts": "2026-11-18T14:32:00Z",
+      "media_time_ms": null,
+      "kind": "exif_timestamp",
+      "ref_id": "ev_image_poster_02",
+      "label": "Original photo capture timestamp from EXIF metadata"
+    },
+    {
+      "id": "evt_upload_02",
+      "case_id": "case_campus_tech_fest_2026",
+      "ts": "2026-11-19T08:05:00Z",
+      "media_time_ms": null,
+      "kind": "upload",
+      "ref_id": "ev_video_quad_01",
+      "label": "Video file 'campus_fest_quad.mp4' ingested into read-only storage"
+    },
+    {
+      "id": "evt_pipeline_03",
+      "case_id": "case_campus_tech_fest_2026",
+      "ts": "2026-11-19T08:25:00Z",
+      "media_time_ms": null,
+      "kind": "analysis_run",
+      "ref_id": "case_campus_tech_fest_2026",
+      "label": "Automated forensic analyzer pipeline execution completed"
+    },
+    {
+      "id": "evt_speech_claim_04",
+      "case_id": "case_campus_tech_fest_2026",
+      "ts": null,
+      "media_time_ms": 6100,
+      "kind": "media_observation",
+      "ref_id": "claim_speech_num_02",
+      "label": "Speech audio segment: speaker states 'about three hundred attendees'"
+    },
+    {
+      "id": "evt_scene_cut_05",
+      "case_id": "case_campus_tech_fest_2026",
+      "ts": null,
+      "media_time_ms": 7400,
+      "kind": "media_observation",
+      "ref_id": "obs_video_cut_02",
+      "label": "Video scene cut aligned synchronously with audio phase shift (t=7400ms)"
+    },
+    {
+      "id": "evt_review_06",
+      "case_id": "case_campus_tech_fest_2026",
+      "ts": "2026-11-19T09:15:00Z",
+      "media_time_ms": null,
+      "kind": "review_decision",
+      "ref_id": "rev_analyst_01",
+      "label": "Analyst logged review decision: attendance mismatch confirmed for human review"
+    }
+  ]
+}

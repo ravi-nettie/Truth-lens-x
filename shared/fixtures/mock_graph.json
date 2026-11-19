@@ -1,0 +1,95 @@
+{
+  "case_id": "case_campus_tech_fest_2026",
+  "nodes": [
+    {
+      "id": "obs_audio_disc_01",
+      "label": "Audio flux jump at 7400ms",
+      "kind": "observation",
+      "modality": "audio",
+      "strength": "moderate",
+      "details": {
+        "time_start_ms": 7380,
+        "time_end_ms": 7420
+      }
+    },
+    {
+      "id": "obs_video_cut_02",
+      "label": "Video scene cut at 7400ms",
+      "kind": "observation",
+      "modality": "video",
+      "strength": "informational",
+      "details": {
+        "time_start_ms": 7400,
+        "time_end_ms": 7400
+      }
+    },
+    {
+      "id": "claim_caption_num_01",
+      "label": "Caption claim: 3,000 attendees",
+      "kind": "claim",
+      "modality": "text",
+      "strength": null,
+      "details": {
+        "source_kind": "caption",
+        "value": {"count": 3000, "entity": "attendees"}
+      }
+    },
+    {
+      "id": "claim_speech_num_02",
+      "label": "Transcript claim: ~300 attendees",
+      "kind": "claim",
+      "modality": "audio",
+      "strength": null,
+      "details": {
+        "source_kind": "transcript",
+        "value": {"count": 300, "entity": "attendees"}
+      }
+    },
+    {
+      "id": "obs_caption_mismatch_04",
+      "label": "Caption vs transcript count mismatch",
+      "kind": "observation",
+      "modality": "text",
+      "strength": "moderate",
+      "details": {
+        "delta_factor": 10.0
+      }
+    },
+    {
+      "id": "obs_image_copymove_03",
+      "label": "SIFT keypoint clustering in crowd",
+      "kind": "observation",
+      "modality": "image",
+      "strength": "moderate",
+      "details": {
+        "cluster_size": 84
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_av_cut_01",
+      "case_id": "case_campus_tech_fest_2026",
+      "src_id": "obs_video_cut_02",
+      "dst_id": "obs_audio_disc_01",
+      "relation": "CO_OCCURS",
+      "rule": "R7_audio_visual_cut",
+      "evidence_observation_ids": ["obs_video_cut_02", "obs_audio_disc_01"],
+      "explanation": "Audio phase discontinuity at t=7400 ms aligns synchronously with video scene cut at t=7400 ms.",
+      "alternative_explanation": "Standard multi-camera editing cut where both audio and video angles transition simultaneously.",
+      "strength": "informational"
+    },
+    {
+      "id": "edge_num_mismatch_02",
+      "case_id": "case_campus_tech_fest_2026",
+      "src_id": "claim_caption_num_01",
+      "dst_id": "claim_speech_num_02",
+      "relation": "CONTRADICTS",
+      "rule": "R3_number_mismatch",
+      "evidence_observation_ids": ["obs_caption_mismatch_04"],
+      "explanation": "Caption asserts an attendance of 3,000 people, which directly contradicts the spoken speech claim of 'about three hundred'.",
+      "alternative_explanation": "Typographical error in social post caption or difference between overall weekend festival registrations vs auditorium seating capacity.",
+      "strength": "moderate"
+    }
+  ]
+}

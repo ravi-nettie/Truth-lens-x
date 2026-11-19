@@ -1,0 +1,106 @@
+[
+  {
+    "id": "obs_audio_disc_01",
+    "case_id": "case_campus_tech_fest_2026",
+    "evidence_id": "ev_audio_speech_03",
+    "modality": "audio",
+    "indicator": "audio_discontinuity",
+    "method": "spectral_flux_analysis",
+    "summary": "Abrupt spectral flux jump detected at 7400 ms",
+    "explanation": "Short-time Fourier transform (STFT) shows an abrupt shift in background noise floor and phase discontinuity at t=7400 ms across frequencies 500 Hz to 4 kHz.",
+    "alternative_explanation": "The speaker or microphone may have bumped the podium or experienced momentary wireless drop/cellular interference, or a camera angle edit occurred in the source recording.",
+    "evidence_strength": "moderate",
+    "model_score": null,
+    "model_calibrated": false,
+    "model_name": null,
+    "region": null,
+    "time_start_ms": 7380,
+    "time_end_ms": 7420,
+    "artifact_ids": ["art_audio_spec_01"],
+    "details": {
+      "frequency_range_hz": [500, 4000],
+      "flux_delta": 4.82
+    },
+    "limitations": "Spectral flux shifts cannot distinguish between physical recording pauses, hardware buffer underruns, and deliberate audio splice edits without reference master audio."
+  },
+  {
+    "id": "obs_video_cut_02",
+    "case_id": "case_campus_tech_fest_2026",
+    "evidence_id": "ev_video_quad_01",
+    "modality": "video",
+    "indicator": "video_scene_cut",
+    "method": "content_detector_hsv",
+    "summary": "Normal video scene cut detected at 7400 ms",
+    "explanation": "Frame-to-frame color histogram delta indicates a standard camera angle cut from podium close-up to wide quad perspective at t=7400 ms (frame 222).",
+    "alternative_explanation": "Standard multi-camera video editing or mobile pause-and-resume.",
+    "evidence_strength": "informational",
+    "model_score": null,
+    "model_calibrated": false,
+    "model_name": null,
+    "region": null,
+    "time_start_ms": 7400,
+    "time_end_ms": 7400,
+    "artifact_ids": ["art_frame_222"],
+    "details": {
+      "frame_index": 222,
+      "cut_confidence": 0.94
+    },
+    "limitations": "Scene cuts are standard editing conventions and do not indicate manipulation on their own."
+  },
+  {
+    "id": "obs_image_copymove_03",
+    "case_id": "case_campus_tech_fest_2026",
+    "evidence_id": "ev_image_poster_02",
+    "modality": "image",
+    "indicator": "copy_move",
+    "method": "sift_keypoint_clustering",
+    "summary": "Clustered identical keypoint groups detected in crowd section",
+    "explanation": "SIFT keypoint descriptor matching identified two dense clusters of matching feature points (n=84) with identical spatial offsets in the upper-right audience sector.",
+    "alternative_explanation": "Repetitive physical background patterns such as identical promotional banners, uniform student apparel, or tiled architectural facades can generate matching keypoints naturally.",
+    "evidence_strength": "moderate",
+    "model_score": 0.78,
+    "model_calibrated": false,
+    "model_name": "sift_cluster_v1",
+    "region": {
+      "x": 2100,
+      "y": 450,
+      "w": 400,
+      "h": 320,
+      "frame_index": null
+    },
+    "time_start_ms": null,
+    "time_end_ms": null,
+    "artifact_ids": ["art_copymove_overlay_01"],
+    "details": {
+      "cluster_size": 84,
+      "euclidean_threshold": 12.5,
+      "uncalibrated_score": 0.78
+    },
+    "limitations": "High-contrast repetitive textures and geometric tiling frequently generate false positive SIFT clusters. Manual visual inspection of pixel noise is required."
+  },
+  {
+    "id": "obs_caption_mismatch_04",
+    "case_id": "case_campus_tech_fest_2026",
+    "evidence_id": "ev_text_caption_04",
+    "modality": "text",
+    "indicator": "caption_number_mismatch",
+    "method": "nlp_claim_cross_reference",
+    "summary": "Caption attendance figure (3,000) sharply conflicts with spoken speech transcript ('about three hundred')",
+    "explanation": "Factual quantity extraction parsed 3,000 attendees from social post caption, whereas Whisper speech transcription at t=5200-6800 ms parsed 'about three hundred attendees gathered here today'.",
+    "alternative_explanation": "Typographical error by social media administrator adding an extra zero, or early preliminary estimate versus actual seated headcount.",
+    "evidence_strength": "moderate",
+    "model_score": null,
+    "model_calibrated": false,
+    "model_name": null,
+    "region": null,
+    "time_start_ms": null,
+    "time_end_ms": null,
+    "artifact_ids": [],
+    "details": {
+      "caption_number": 3000,
+      "transcript_number": 300,
+      "delta_factor": 10.0
+    },
+    "limitations": "Textual extraction cannot verify ground-truth attendance independently without badge scan logs or gate turnstile records."
+  }
+]

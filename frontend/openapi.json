@@ -1,0 +1,3070 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "TruthLens X",
+    "description": "Offline CPU-First Multimodal Forensic Platform",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health Check",
+        "description": "Returns local service health and forensic operating parameters.",
+        "operationId": "health_check_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Check Api Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "List Cases",
+        "description": "Lists all cases with evidence counts.",
+        "operationId": "list_cases_api_cases_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Create Case",
+        "description": "Creates a new case with status 'created'.",
+        "operationId": "create_case_api_cases_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaseCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases/{case_id}": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Get Case",
+        "description": "Retrieves full details for a case, including its active evidence items.",
+        "operationId": "get_case_api_cases__case_id__get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases/{case_id}/evidence": {
+      "post": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Upload Evidence",
+        "description": "Ingests and validates an evidence file into the read-only evidence repository.\nEnforces magic bytes, extension allow-list, size limits, and SHA-256 integrity.",
+        "operationId": "upload_evidence_api_cases__case_id__evidence_post",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_evidence_api_cases__case_id__evidence_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases/{case_id}/caption": {
+      "post": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Add Caption",
+        "description": "Ingests a text caption or accompanying social media post as text evidence and claim.",
+        "operationId": "add_caption_api_cases__case_id__caption_post",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptionCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases/{case_id}/analyze": {
+      "post": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Trigger Analysis",
+        "description": "Triggers the multimodal forensic pipeline for all evidence items in the case.\nExecutes in background or synchronously based on the ?sync parameter.",
+        "operationId": "trigger_analysis_api_cases__case_id__analyze_post",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "sync",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Whether to execute synchronously",
+              "default": false,
+              "title": "Sync"
+            },
+            "description": "Whether to execute synchronously"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Trigger Analysis Api Cases  Case Id  Analyze Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases/{case_id}/status": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Get Case Status",
+        "description": "Returns the current pipeline execution status for a case.",
+        "operationId": "get_case_status_api_cases__case_id__status_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases/{case_id}/observations": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Get Observations",
+        "description": "Retrieves forensic observations for a case, with optional modality filter.",
+        "operationId": "get_observations_api_cases__case_id__observations_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "modality",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional modality filter (image, video, audio, text)",
+              "title": "Modality"
+            },
+            "description": "Optional modality filter (image, video, audio, text)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Observation"
+                  },
+                  "title": "Response Get Observations Api Cases  Case Id  Observations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases/{case_id}/graph": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Get Graph",
+        "description": "Returns the correlation graph nodes and edges for a case.",
+        "operationId": "get_graph_api_cases__case_id__graph_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases/{case_id}/timeline": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Get Timeline",
+        "description": "Returns chronological provenance and media timeline events for a case.",
+        "operationId": "get_timeline_api_cases__case_id__timeline_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases/{case_id}/audit": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Get Audit",
+        "description": "Returns the case audit log records and cryptographic chain verification result.",
+        "operationId": "get_audit_api_cases__case_id__audit_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Audit Api Cases  Case Id  Audit Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases/{case_id}/report": {
+      "post": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Create Report",
+        "description": "Stub endpoint for generating report (completed in Phase 7).",
+        "operationId": "create_report_api_cases__case_id__report_post",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportGenerateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/evidence/{evidence_id}/file": {
+      "get": {
+        "tags": [
+          "Evidence"
+        ],
+        "summary": "Get Evidence File",
+        "description": "Streams original evidence file from read-only storage as attachment.",
+        "operationId": "get_evidence_file_api_evidence__evidence_id__file_get",
+        "parameters": [
+          {
+            "name": "evidence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evidence Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/evidence/{evidence_id}/verify-hash": {
+      "post": {
+        "tags": [
+          "Evidence"
+        ],
+        "summary": "Verify Evidence Hash",
+        "description": "Recomputes SHA-256 on disk, verifies against DB record, and logs audit entry.",
+        "operationId": "verify_evidence_hash_api_evidence__evidence_id__verify_hash_post",
+        "parameters": [
+          {
+            "name": "evidence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evidence Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Verify Evidence Hash Api Evidence  Evidence Id  Verify Hash Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/evidence/{evidence_id}": {
+      "delete": {
+        "tags": [
+          "Evidence"
+        ],
+        "summary": "Delete Evidence Endpoint",
+        "description": "Deletes evidence file and derived artifacts, sets tombstone deleted_at,\nand appends a hash-chained audit log entry.",
+        "operationId": "delete_evidence_endpoint_api_evidence__evidence_id__delete",
+        "parameters": [
+          {
+            "name": "evidence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evidence Id"
+            }
+          },
+          {
+            "name": "confirm",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Must be true to confirm permanent deletion",
+              "default": false,
+              "title": "Confirm"
+            },
+            "description": "Must be true to confirm permanent deletion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete Evidence Endpoint Api Evidence  Evidence Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/observations/{observation_id}/review": {
+      "post": {
+        "tags": [
+          "Observations"
+        ],
+        "summary": "Review Observation",
+        "description": "Records an analyst review verdict on a forensic observation.",
+        "operationId": "review_observation_api_observations__observation_id__review_post",
+        "parameters": [
+          {
+            "name": "observation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Observation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObservationReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/artifacts/{artifact_id}": {
+      "get": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "Get Artifact",
+        "description": "Retrieves metadata or file content for a derived analysis artifact.",
+        "operationId": "get_artifact_api_artifacts__artifact_id__get",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/{report_id}.pdf": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Get Pdf Report",
+        "description": "Stub endpoint for PDF report download (implemented in Phase 7).",
+        "operationId": "get_pdf_report_api_reports__report_id__pdf_get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/{report_id}.json": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Get Json Report",
+        "description": "Stub endpoint for JSON report download (implemented in Phase 7).",
+        "operationId": "get_json_report_api_reports__report_id__json_get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health Check",
+        "description": "Returns local service health and forensic operating parameters.",
+        "operationId": "health_check_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Check Api V1 Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cases": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "List Cases",
+        "description": "Lists all cases with evidence counts.",
+        "operationId": "list_cases_api_v1_cases_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Create Case",
+        "description": "Creates a new case with status 'created'.",
+        "operationId": "create_case_api_v1_cases_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaseCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cases/{case_id}": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Get Case",
+        "description": "Retrieves full details for a case, including its active evidence items.",
+        "operationId": "get_case_api_v1_cases__case_id__get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cases/{case_id}/evidence": {
+      "post": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Upload Evidence",
+        "description": "Ingests and validates an evidence file into the read-only evidence repository.\nEnforces magic bytes, extension allow-list, size limits, and SHA-256 integrity.",
+        "operationId": "upload_evidence_api_v1_cases__case_id__evidence_post",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_evidence_api_v1_cases__case_id__evidence_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cases/{case_id}/caption": {
+      "post": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Add Caption",
+        "description": "Ingests a text caption or accompanying social media post as text evidence and claim.",
+        "operationId": "add_caption_api_v1_cases__case_id__caption_post",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptionCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cases/{case_id}/analyze": {
+      "post": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Trigger Analysis",
+        "description": "Triggers the multimodal forensic pipeline for all evidence items in the case.\nExecutes in background or synchronously based on the ?sync parameter.",
+        "operationId": "trigger_analysis_api_v1_cases__case_id__analyze_post",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "sync",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Whether to execute synchronously",
+              "default": false,
+              "title": "Sync"
+            },
+            "description": "Whether to execute synchronously"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Trigger Analysis Api V1 Cases  Case Id  Analyze Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cases/{case_id}/status": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Get Case Status",
+        "description": "Returns the current pipeline execution status for a case.",
+        "operationId": "get_case_status_api_v1_cases__case_id__status_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cases/{case_id}/observations": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Get Observations",
+        "description": "Retrieves forensic observations for a case, with optional modality filter.",
+        "operationId": "get_observations_api_v1_cases__case_id__observations_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "modality",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional modality filter (image, video, audio, text)",
+              "title": "Modality"
+            },
+            "description": "Optional modality filter (image, video, audio, text)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Observation"
+                  },
+                  "title": "Response Get Observations Api V1 Cases  Case Id  Observations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cases/{case_id}/graph": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Get Graph",
+        "description": "Returns the correlation graph nodes and edges for a case.",
+        "operationId": "get_graph_api_v1_cases__case_id__graph_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cases/{case_id}/timeline": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Get Timeline",
+        "description": "Returns chronological provenance and media timeline events for a case.",
+        "operationId": "get_timeline_api_v1_cases__case_id__timeline_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cases/{case_id}/audit": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Get Audit",
+        "description": "Returns the case audit log records and cryptographic chain verification result.",
+        "operationId": "get_audit_api_v1_cases__case_id__audit_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Audit Api V1 Cases  Case Id  Audit Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cases/{case_id}/report": {
+      "post": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Create Report",
+        "description": "Stub endpoint for generating report (completed in Phase 7).",
+        "operationId": "create_report_api_v1_cases__case_id__report_post",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportGenerateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evidence/{evidence_id}/file": {
+      "get": {
+        "tags": [
+          "Evidence"
+        ],
+        "summary": "Get Evidence File",
+        "description": "Streams original evidence file from read-only storage as attachment.",
+        "operationId": "get_evidence_file_api_v1_evidence__evidence_id__file_get",
+        "parameters": [
+          {
+            "name": "evidence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evidence Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evidence/{evidence_id}/verify-hash": {
+      "post": {
+        "tags": [
+          "Evidence"
+        ],
+        "summary": "Verify Evidence Hash",
+        "description": "Recomputes SHA-256 on disk, verifies against DB record, and logs audit entry.",
+        "operationId": "verify_evidence_hash_api_v1_evidence__evidence_id__verify_hash_post",
+        "parameters": [
+          {
+            "name": "evidence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evidence Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Verify Evidence Hash Api V1 Evidence  Evidence Id  Verify Hash Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evidence/{evidence_id}": {
+      "delete": {
+        "tags": [
+          "Evidence"
+        ],
+        "summary": "Delete Evidence Endpoint",
+        "description": "Deletes evidence file and derived artifacts, sets tombstone deleted_at,\nand appends a hash-chained audit log entry.",
+        "operationId": "delete_evidence_endpoint_api_v1_evidence__evidence_id__delete",
+        "parameters": [
+          {
+            "name": "evidence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evidence Id"
+            }
+          },
+          {
+            "name": "confirm",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Must be true to confirm permanent deletion",
+              "default": false,
+              "title": "Confirm"
+            },
+            "description": "Must be true to confirm permanent deletion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete Evidence Endpoint Api V1 Evidence  Evidence Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/observations/{observation_id}/review": {
+      "post": {
+        "tags": [
+          "Observations"
+        ],
+        "summary": "Review Observation",
+        "description": "Records an analyst review verdict on a forensic observation.",
+        "operationId": "review_observation_api_v1_observations__observation_id__review_post",
+        "parameters": [
+          {
+            "name": "observation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Observation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObservationReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/artifacts/{artifact_id}": {
+      "get": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "Get Artifact",
+        "description": "Retrieves metadata or file content for a derived analysis artifact.",
+        "operationId": "get_artifact_api_v1_artifacts__artifact_id__get",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/{report_id}.pdf": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Get Pdf Report",
+        "description": "Stub endpoint for PDF report download (implemented in Phase 7).",
+        "operationId": "get_pdf_report_api_v1_reports__report_id__pdf_get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/{report_id}.json": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Get Json Report",
+        "description": "Stub endpoint for JSON report download (implemented in Phase 7).",
+        "operationId": "get_json_report_api_v1_reports__report_id__json_get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health Check",
+        "description": "Returns local service health and forensic operating parameters.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnalysisStatusResponse": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Case identifier"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "queued",
+              "running",
+              "completed",
+              "failed"
+            ],
+            "title": "Status",
+            "description": "Run status"
+          },
+          "progress_percent": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Progress Percent",
+            "description": "Analysis progress",
+            "default": 0.0
+          },
+          "current_step": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Step",
+            "description": "Current analyzer pipeline step"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors",
+            "description": "Any analyzer error strings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "status"
+        ],
+        "title": "AnalysisStatusResponse"
+      },
+      "Body_upload_evidence_api_cases__case_id__evidence_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_evidence_api_cases__case_id__evidence_post"
+      },
+      "Body_upload_evidence_api_v1_cases__case_id__evidence_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_evidence_api_v1_cases__case_id__evidence_post"
+      },
+      "CaptionCreateRequest": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Case ID"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Text",
+            "description": "Caption or post text accompanying media"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "Source of the caption (e.g. social_post, alt_text)",
+            "default": "user_input"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "text"
+        ],
+        "title": "CaptionCreateRequest"
+      },
+      "CaptionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Caption evidence ID"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Case ID"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Caption text"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Source of caption"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "ISO timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "text",
+          "source",
+          "created_at"
+        ],
+        "title": "CaptionResponse"
+      },
+      "CaseCreateRequest": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "description": "Case title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Case description",
+            "default": ""
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Case notes",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "CaseCreateRequest"
+      },
+      "CaseDetailResponse": {
+        "properties": {
+          "case": {
+            "$ref": "#/components/schemas/CaseResponse"
+          },
+          "evidence_items": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceResponse"
+            },
+            "type": "array",
+            "title": "Evidence Items"
+          },
+          "observation_count": {
+            "type": "integer",
+            "title": "Observation Count",
+            "default": 0
+          },
+          "claim_count": {
+            "type": "integer",
+            "title": "Claim Count",
+            "default": 0
+          },
+          "contradiction_count": {
+            "type": "integer",
+            "title": "Contradiction Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "case"
+        ],
+        "title": "CaseDetailResponse"
+      },
+      "CaseListResponse": {
+        "properties": {
+          "cases": {
+            "items": {
+              "$ref": "#/components/schemas/CaseResponse"
+            },
+            "type": "array",
+            "title": "Cases"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "CaseListResponse"
+      },
+      "CaseResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Case ID"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Case title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Case description",
+            "default": ""
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "ISO timestamp"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At",
+            "description": "ISO timestamp"
+          },
+          "evidence_count": {
+            "type": "integer",
+            "title": "Evidence Count",
+            "description": "Total evidence items associated",
+            "default": 0
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Case review status",
+            "default": "open"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CaseResponse"
+      },
+      "EvidenceResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Evidence ID"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Associated case ID"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Original uploaded filename"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256",
+            "description": "SHA-256 hash of read-only original file"
+          },
+          "modality": {
+            "$ref": "#/components/schemas/Modality",
+            "description": "Media modality"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME content type"
+          },
+          "file_size_bytes": {
+            "type": "integer",
+            "title": "File Size Bytes",
+            "description": "Original file size in bytes"
+          },
+          "file_path": {
+            "type": "string",
+            "title": "File Path",
+            "description": "Internal read-only storage path"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "ISO timestamp of ingestion"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Extracted container metadata"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind",
+            "description": "Modality/kind alias"
+          },
+          "original_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Name",
+            "description": "Original filename alias"
+          },
+          "stored_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stored Path",
+            "description": "Stored path alias"
+          },
+          "size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size Bytes",
+            "description": "Size in bytes alias"
+          },
+          "mime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime",
+            "description": "MIME type alias"
+          },
+          "uploaded_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uploaded At",
+            "description": "Upload timestamp alias"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note",
+            "description": "Source notes"
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted At",
+            "description": "Tombstone timestamp if deleted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "filename",
+          "sha256",
+          "modality",
+          "mime_type",
+          "file_size_bytes",
+          "file_path",
+          "created_at"
+        ],
+        "title": "EvidenceResponse"
+      },
+      "EvidenceUploadResponse": {
+        "properties": {
+          "evidence": {
+            "$ref": "#/components/schemas/EvidenceResponse"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Evidence ingested and stored in read-only repository."
+          }
+        },
+        "type": "object",
+        "required": [
+          "evidence"
+        ],
+        "title": "EvidenceUploadResponse"
+      },
+      "GraphEdge": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique edge identifier"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Case identifier"
+          },
+          "src_id": {
+            "type": "string",
+            "title": "Src Id",
+            "description": "Source node ID (observation or claim ID)"
+          },
+          "dst_id": {
+            "type": "string",
+            "title": "Dst Id",
+            "description": "Destination node ID (observation or claim ID)"
+          },
+          "relation": {
+            "type": "string",
+            "enum": [
+              "SUPPORTS",
+              "CONTRADICTS",
+              "CO_OCCURS",
+              "DERIVED_FROM",
+              "NEEDS_REVIEW"
+            ],
+            "title": "Relation",
+            "description": "Correlation relationship"
+          },
+          "rule": {
+            "type": "string",
+            "title": "Rule",
+            "description": "Correlation rule name or code (e.g. R3_number_mismatch, R7_audio_visual_cut)"
+          },
+          "evidence_observation_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Evidence Observation Ids",
+            "description": "IDs of observations supporting this edge; must have at least one supporting observation"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation",
+            "description": "Human-readable explanation of why these nodes are linked"
+          },
+          "alternative_explanation": {
+            "type": "string",
+            "title": "Alternative Explanation",
+            "description": "Benign alternative explanation (mandatory for CONTRADICTS relations)",
+            "default": ""
+          },
+          "strength": {
+            "$ref": "#/components/schemas/Strength",
+            "description": "Strength of the correlation edge"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "src_id",
+          "dst_id",
+          "relation",
+          "rule",
+          "evidence_observation_ids",
+          "explanation",
+          "strength"
+        ],
+        "title": "GraphEdge"
+      },
+      "GraphNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Node ID (observation or claim ID)"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Display label"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "observation",
+              "claim"
+            ],
+            "title": "Kind",
+            "description": "Node kind"
+          },
+          "modality": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Modality"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Modality if applicable"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Strength"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Strength if observation"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "description": "Node metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "kind"
+        ],
+        "title": "GraphNode"
+      },
+      "GraphResponse": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Case identifier"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/GraphNode"
+            },
+            "type": "array",
+            "title": "Nodes",
+            "description": "Graph nodes"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdge"
+            },
+            "type": "array",
+            "title": "Edges",
+            "description": "Graph edges"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id"
+        ],
+        "title": "GraphResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Modality": {
+        "type": "string",
+        "enum": [
+          "image",
+          "video",
+          "audio",
+          "text",
+          "case"
+        ],
+        "title": "Modality"
+      },
+      "Observation": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique observation ID (e.g. obs_<sha256> or obs_<uuid>)"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Case identifier"
+          },
+          "evidence_id": {
+            "type": "string",
+            "title": "Evidence Id",
+            "description": "Source evidence identifier"
+          },
+          "modality": {
+            "$ref": "#/components/schemas/Modality",
+            "description": "Modality under observation"
+          },
+          "indicator": {
+            "type": "string",
+            "title": "Indicator",
+            "description": "Technical indicator (e.g. audio_discontinuity, copy_move, scene_cut)"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "description": "Forensic method used to detect indicator"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "description": "High-level summary for reviewers"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation",
+            "description": "Technical details of observed anomaly or signal"
+          },
+          "alternative_explanation": {
+            "type": "string",
+            "title": "Alternative Explanation",
+            "description": "Plausible benign explanation (mandatory for weak and moderate strength observations)",
+            "default": ""
+          },
+          "evidence_strength": {
+            "$ref": "#/components/schemas/Strength",
+            "description": "Forensic evidence strength"
+          },
+          "model_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Score",
+            "description": "Optional uncalibrated model score. Never represent as a global fake probability."
+          },
+          "model_calibrated": {
+            "type": "boolean",
+            "title": "Model Calibrated",
+            "description": "Must remain False for any pretrained ML score in compliance with forensic honesty rules.",
+            "default": false
+          },
+          "model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Name",
+            "description": "Name of the model if an ML analyzer was used"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Region"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Spatial bounding box if applicable"
+          },
+          "time_start_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Start Ms",
+            "description": "Start offset in milliseconds for time-based media"
+          },
+          "time_end_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time End Ms",
+            "description": "End offset in milliseconds for time-based media"
+          },
+          "artifact_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Artifact Ids",
+            "description": "IDs of derived artifact files"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "description": "Raw analyzer-specific telemetry"
+          },
+          "limitations": {
+            "type": "string",
+            "title": "Limitations",
+            "description": "Forensic limitations and scope bounds (mandatory for weak and moderate observations)",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "evidence_id",
+          "modality",
+          "indicator",
+          "method",
+          "summary",
+          "explanation",
+          "evidence_strength"
+        ],
+        "title": "Observation"
+      },
+      "ObservationReviewRequest": {
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/ReviewDecision",
+            "description": "Analyst review verdict"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note",
+            "description": "Analyst justification note"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Analyst justification notes"
+          },
+          "reviewer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer",
+            "description": "Reviewer name or identifier",
+            "default": "analyst"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision"
+        ],
+        "title": "ObservationReviewRequest"
+      },
+      "Region": {
+        "properties": {
+          "x": {
+            "type": "integer",
+            "title": "X",
+            "description": "Top-left X coordinate in pixels"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y",
+            "description": "Top-left Y coordinate in pixels"
+          },
+          "w": {
+            "type": "integer",
+            "title": "W",
+            "description": "Width in pixels"
+          },
+          "h": {
+            "type": "integer",
+            "title": "H",
+            "description": "Height in pixels"
+          },
+          "frame_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frame Index",
+            "description": "Optional video frame index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "w",
+          "h"
+        ],
+        "title": "Region"
+      },
+      "ReportGenerateRequest": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Case identifier"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "json",
+              "pdf"
+            ],
+            "title": "Format",
+            "description": "Target report format",
+            "default": "json"
+          },
+          "include_artifacts": {
+            "type": "boolean",
+            "title": "Include Artifacts",
+            "description": "Whether to include links to derived artifacts",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id"
+        ],
+        "title": "ReportGenerateRequest"
+      },
+      "ReportResponse": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Case identifier"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At",
+            "description": "ISO timestamp"
+          },
+          "format": {
+            "type": "string",
+            "title": "Format",
+            "description": "Report format (json or pdf)"
+          },
+          "report_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Json",
+            "description": "Structured report payload"
+          },
+          "download_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Url",
+            "description": "URL or relative path to download the report"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "generated_at",
+          "format"
+        ],
+        "title": "ReportResponse"
+      },
+      "ReviewDecision": {
+        "type": "string",
+        "enum": [
+          "confirmed",
+          "disputed",
+          "inconclusive",
+          "dismissed"
+        ],
+        "title": "ReviewDecision"
+      },
+      "ReviewResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Review log ID"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Case ID"
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id",
+            "description": "Target entity ID"
+          },
+          "target_type": {
+            "type": "string",
+            "title": "Target Type",
+            "description": "Target entity type"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/ReviewDecision",
+            "description": "Review verdict"
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes",
+            "description": "Analyst notes"
+          },
+          "reviewer": {
+            "type": "string",
+            "title": "Reviewer",
+            "description": "Reviewer identifier"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "ISO timestamp of review submission"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "target_id",
+          "target_type",
+          "decision",
+          "notes",
+          "reviewer",
+          "created_at"
+        ],
+        "title": "ReviewResponse"
+      },
+      "Strength": {
+        "type": "string",
+        "enum": [
+          "informational",
+          "weak",
+          "moderate",
+          "strong"
+        ],
+        "title": "Strength"
+      },
+      "TimelineEvent": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique timeline event identifier"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Case identifier"
+          },
+          "ts": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ts",
+            "description": "Absolute ISO8601 timestamp if available"
+          },
+          "media_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Time Ms",
+            "description": "Media timeline offset in milliseconds"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "description": "Event kind (upload, exif_timestamp, scene_cut, observation, review)"
+          },
+          "ref_id": {
+            "type": "string",
+            "title": "Ref Id",
+            "description": "Referenced entity ID (evidence_id, observation_id, review_id)"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Concise human-readable label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "kind",
+          "ref_id",
+          "label"
+        ],
+        "title": "TimelineEvent"
+      },
+      "TimelineResponse": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Case identifier"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineEvent"
+            },
+            "type": "array",
+            "title": "Events",
+            "description": "Chronological timeline events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id"
+        ],
+        "title": "TimelineResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

@@ -1,0 +1,35 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Data and Artifacts (Rule 3)
+data/
+!data/.gitkeep
+models/
+!models/.gitkeep
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/.next/
+frontend/build/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs & OS artifacts
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
