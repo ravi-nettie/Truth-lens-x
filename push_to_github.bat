@@ -10,15 +10,15 @@ git remote set-url origin https://github.com/ravi-nettie/Truth-lens-x.git
 echo Remote configured:
 git remote -v
 echo.
-echo Pushing 'main' branch to origin...
-git push -u origin main
+echo Pushing 'main' branch to origin (with --force)...
+git push -u origin main --force
 
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo [!] Push failed or authentication was cancelled.
     echo If you use SSH keys instead of HTTPS, run:
     echo   git remote set-url origin git@github.com:ravi-nettie/Truth-lens-x.git
-    echo   git push -u origin main
+    echo   git push -u origin main --force
 ) else (
     echo.
     echo ====================================================
