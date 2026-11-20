@@ -19,7 +19,6 @@ import {
   ChevronRight,
   User,
 } from "lucide-react";
-import { MockRibbon } from "./MockRibbon";
 import { EvidenceStrengthLegend } from "./EvidenceStrengthLegend";
 import { api, SchemaCaseResponse } from "../api/client";
 
@@ -332,10 +331,7 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
 
   return (
     <div className="min-h-screen w-full bg-white text-slate-900 font-sans flex flex-col">
-      {/* 1. Mandatory Mock Data Ribbon (only when active) */}
-      <MockRibbon />
-
-      {/* 2. Application Shell Grid */}
+      {/* Application Shell Grid */}
       <div className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)]">
         {/* Left Desktop Sidebar (260px, sticky top-0, height 100vh) */}
         <aside className="hidden lg:flex flex-col justify-between sticky top-0 h-screen w-[260px] bg-[#14243B] text-slate-200 z-30 select-none overflow-y-auto border-r border-slate-800/80">

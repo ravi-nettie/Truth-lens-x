@@ -120,6 +120,26 @@ def transcribe_audio(
             )
         )
 
+        observations.append(
+            Observation(
+                id=f"obs_transcript_{uuid4().hex[:8]}",
+                case_id=case_id,
+                evidence_id=evidence_id,
+                modality=Modality.audio,
+                indicator="speech_transcription_completed",
+                method="fallback_transcription",
+                summary=f"Speech transcript ingested ({source_label})",
+                explanation=f'Transcript text: "{fallback_text[:120]}{"..." if len(fallback_text) > 120 else ""}"',
+                alternative_explanation=f"Text provided as {source_label} reference transcript.",
+                evidence_strength=Strength.informational,
+                artifact_ids=[art_id],
+                details={
+                    "transcription": transcript_data
+                },
+                limitations=ASR_LIMITATION
+            )
+        )
+
         return "done", observations, claims, artifacts, details
 
     # 2. Check if wav_path exists
@@ -263,6 +283,26 @@ def transcribe_audio(
             "sha256": art_sha256,
             "description": f"ASR Speech transcript ({model_name}, local CPU)"
         })
+
+        observations.append(
+            Observation(
+                id=f"obs_transcript_{uuid4().hex[:8]}",
+                case_id=case_id,
+                evidence_id=evidence_id,
+                modality=Modality.audio,
+                indicator="speech_transcription_completed",
+                method="faster_whisper_asr",
+                summary=f"Speech transcription completed ({len(segments_list)} segments, {details.get('speech_rate_wpm', 0)} WPM)",
+                explanation=f'Transcribed audio: "{full_text[:120]}{"..." if len(full_text) > 120 else ""}"',
+                alternative_explanation="Spoken language captured by offline acoustic speech recognition model.",
+                evidence_strength=Strength.informational,
+                artifact_ids=[art_id],
+                details={
+                    "transcription": transcript_data
+                },
+                limitations=ASR_LIMITATION
+            )
+        )
 
         return "done", observations, claims, artifacts, details
 

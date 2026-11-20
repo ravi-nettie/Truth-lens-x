@@ -161,3 +161,85 @@ def test_media_without_audio_stream(test_dirs):
     no_aud_obs = next((o for o in result.observations if o.indicator == "no_audio_stream"), None)
     assert no_aud_obs is not None
     assert no_aud_obs.evidence_strength == Strength.informational
+
+
+def test_audio_spectrogram_observation_and_artifacts(test_dirs):
+    """Verifies that analyze() emits audio_spectrogram Observation linked to waveform & spectrogram artifacts."""
+    work_dir, art_dir = test_dirs
+    wav_path = work_dir / "clean_tone.wav"
+
+    sr = 16000
+    t = np.linspace(0, 1.0, int(sr * 1.0), endpoint=False)
+    tone = 0.5 * np.sin(2 * np.pi * 440 * t)
+    write_test_wav(wav_path, tone, sr=sr)
+
+    ctx = AnalysisContext(case_id="case_obs_test", work_dir=str(work_dir), artifact_dir=str(art_dir))
+    evidence = {"id": "ev_aud_obs", "stored_path": str(wav_path)}
+
+    result = analyze(evidence, ctx)
+    assert result.status == "done"
+
+    spec_obs = next((o for o in result.observations if o.indicator == "audio_spectrogram"), None)
+    assert spec_obs is not None
+    assert spec_obs.method == "stft_and_waveform_envelope"
+    assert len(spec_obs.artifact_ids) == 2
+    assert "spectrogram" in spec_obs.details
+    assert spec_obs.details["duration_ms"] > 0
+    assert spec_obs.details["sample_rate"] == 16000
+
+
+def test_audio_formats_mp3_and_m4a(test_dirs):
+    """Verifies that audio analyzer accepts and processes MP3 and M4A audio containers."""
+    work_dir, art_dir = test_dirs
+    wav_path = work_dir / "sample.wav"
+    mp3_path = work_dir / "sample.mp3"
+    m4a_path = work_dir / "sample.m4a"
+
+    sr = 16000
+    t = np.linspace(0, 1.0, int(sr * 1.0), endpoint=False)
+    tone = 0.4 * np.sin(2 * np.pi * 440 * t)
+    write_test_wav(wav_path, tone, sr=sr)
+
+    from backend.app.services.safe_subprocess import run_ffmpeg
+    run_ffmpeg(["-i", str(wav_path), "-vn", "-y", str(mp3_path)])
+    run_ffmpeg(["-i", str(wav_path), "-vn", "-c:a", "aac", "-y", str(m4a_path)])
+
+    if mp3_path.exists():
+        ctx_mp3 = AnalysisContext(case_id="case_mp3", work_dir=str(work_dir), artifact_dir=str(art_dir))
+        res_mp3 = analyze({"id": "ev_mp3", "stored_path": str(mp3_path)}, ctx_mp3)
+        assert res_mp3.status == "done"
+        assert any(o.indicator == "audio_spectrogram" for o in res_mp3.observations)
+
+    if m4a_path.exists():
+        ctx_m4a = AnalysisContext(case_id="case_m4a", work_dir=str(work_dir), artifact_dir=str(art_dir))
+        res_m4a = analyze({"id": "ev_m4a", "stored_path": str(m4a_path)}, ctx_m4a)
+        assert res_m4a.status == "done"
+        assert any(o.indicator == "audio_spectrogram" for o in res_m4a.observations)
+
+
+def test_audio_transcribe_fallback_observation(test_dirs):
+    """Verifies that transcribe_audio emits speech_transcription_completed observation."""
+    work_dir, art_dir = test_dirs
+    wav_path = work_dir / "sample_speech.wav"
+
+    sr = 16000
+    t = np.linspace(0, 1.0, int(sr * 1.0), endpoint=False)
+    tone = 0.4 * np.sin(2 * np.pi * 440 * t)
+    write_test_wav(wav_path, tone, sr=sr)
+
+    from backend.app.analyzers.audio.transcribe import transcribe_audio
+    status, obs, claims, artifacts, details = transcribe_audio(
+        evidence_id="ev_transcribe",
+        case_id="case_transcribe",
+        wav_path=wav_path,
+        artifact_dir=art_dir,
+        evidence_meta={"transcript": "Testing transcription pipeline fallback"}
+    )
+
+    assert status == "done"
+    trans_obs = next((o for o in obs if o.indicator == "speech_transcription_completed"), None)
+    assert trans_obs is not None
+    assert "Testing transcription pipeline fallback" in trans_obs.details["transcription"]["text"]
+    assert len(trans_obs.artifact_ids) >= 1
+
+

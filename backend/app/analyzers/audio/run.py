@@ -14,8 +14,9 @@ Adheres strictly to Rule 1, Rule 2, Rule 3, and Rule 4:
 import os
 from pathlib import Path
 from typing import Any, Dict, List
+from uuid import uuid4
 
-from shared.schemas import AnalysisContext, AnalyzerResult, Claim, Observation
+from shared.schemas import AnalysisContext, AnalyzerResult, Claim, Modality, Observation, Strength
 from backend.app.analyzers.audio.extract import extract_audio_wav
 from backend.app.analyzers.audio.spectrogram import generate_waveform_and_spectrogram
 from backend.app.analyzers.audio.discontinuity import analyze_audio_discontinuities
@@ -84,6 +85,33 @@ def analyze(evidence: Dict[str, Any], ctx: AnalysisContext) -> AnalyzerResult:
         )
         all_artifacts.extend(spec_artifacts)
         metadata["spectrogram"] = spec_telemetry
+
+        if spec_artifacts:
+            art_ids = [a["id"] for a in spec_artifacts]
+            dur_ms = spec_telemetry.get("duration_ms", 0)
+            sr = spec_telemetry.get("sample_rate", 16000)
+            all_observations.append(
+                Observation(
+                    id=f"obs_spec_{uuid4().hex[:8]}",
+                    case_id=case_id,
+                    evidence_id=evidence_id,
+                    modality=Modality.audio,
+                    indicator="audio_spectrogram",
+                    method="stft_and_waveform_envelope",
+                    summary=f"Audio spectrogram and waveform generated ({dur_ms} ms, {sr} Hz)",
+                    explanation="Waveform envelope and STFT Mel-spectrogram computed offline from audio track.",
+                    alternative_explanation="Baseline acoustic representations for human review and forensic inspection.",
+                    evidence_strength=Strength.informational,
+                    artifact_ids=art_ids,
+                    details={
+                        "spectrogram": spec_telemetry,
+                        "artifact_ids": art_ids,
+                        "duration_ms": dur_ms,
+                        "sample_rate": sr
+                    },
+                    limitations="Visual representations show acoustic power across frequency bins over time."
+                )
+            )
 
         # 3. Spectral Flux & Acoustic Discontinuity Detection
         disc_obs, disc_telemetry = analyze_audio_discontinuities(
