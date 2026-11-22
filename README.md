@@ -9,6 +9,8 @@
 
 > **Decision-Support Workbench — Not a Verdict Machine.**  
 > TruthLens X is a 100% offline, local-first multimodal digital media forensics and verification workbench designed for newsrooms, human rights investigators, OSINT analysts, and fact-checking organizations.
+>
+> 🌐 **Live Frontend Demo**: [https://ravi-nettie.github.io/Truth-lens-x/](https://ravi-nettie.github.io/Truth-lens-x/)
 
 ---
 
@@ -311,6 +313,29 @@ docker compose down
 
 ### Volume Persistence
 Docker mounts `./data` and `./models` to the container's `/app/data` and `/app/models`, ensuring all uploaded cases, analysis records, and downloaded weights persist across container restarts.
+
+### One-Click Cloud Deployment (Full Stack: Backend + Frontend + FFmpeg)
+
+TruthLens X includes ready-to-use configuration files for instant cloud hosting:
+
+#### Option 1: Render (Recommended — Free Web Service)
+1. Fork or push to your GitHub account (`https://github.com/ravi-nettie/Truth-lens-x`).
+2. Log into [Render.com](https://render.com) and click **New > Blueprint**.
+3. Connect your repository. Render will automatically detect [render.yaml](render.yaml) and deploy the complete Docker container (FastAPI backend + FFmpeg + built React frontend) as a single web service.
+
+#### Option 2: Railway
+1. Log into [Railway.app](https://railway.app) and create a **New Project > Deploy from GitHub repo**.
+2. Select `Truth-lens-x`. Railway detects [railway.json](railway.json) and [Dockerfile](Dockerfile) and automatically spins up the instance.
+
+#### Option 3: Fly.io
+```bash
+fly launch --config fly.toml
+fly deploy
+```
+
+#### Option 4: GitHub Pages (Static Interactive Demo)
+Automated on every push via `.github/workflows/deploy-pages.yml`:
+[https://ravi-nettie.github.io/Truth-lens-x/](https://ravi-nettie.github.io/Truth-lens-x/)
 
 ---
 

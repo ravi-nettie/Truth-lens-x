@@ -1,6 +1,15 @@
 # TruthLens X — Offline Multimodal Media Forensics
-# Single-port production Docker container (FastAPI + React SPA)
+# Single-port production Docker container (FastAPI + React SPA + FFmpeg)
 
+# Stage 1: Build Frontend React SPA
+FROM node:20-slim AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+# Stage 2: Production Python & FFmpeg Container
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -28,8 +37,8 @@ COPY scripts/ ./scripts/
 COPY samples/ ./samples/
 COPY Makefile ./Makefile
 
-# Copy built frontend production bundle (single-port serving via FastAPI)
-COPY frontend/dist/ ./frontend/dist/
+# Copy built frontend production bundle from frontend-builder
+COPY --from=frontend-builder /app/frontend/dist/ ./frontend/dist/
 
 # Provision local-first persistence directories
 RUN mkdir -p /app/data /app/models /app/data/evidence /app/data/artifacts /app/data/tmp
@@ -44,7 +53,7 @@ EXPOSE 8000
 
 # Native healthcheck verifying offline API status
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8000/api/health || exit 1
+  CMD curl -f http://localhost:${PORT:-8000}/api/health || exit 1
 
-# Launch single-port production server
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Launch single-port production server (supports cloud $PORT or default 8000)
+CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

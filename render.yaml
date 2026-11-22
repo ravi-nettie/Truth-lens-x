@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: truthlens-x
+    runtime: docker
+    plan: free
+    region: oregon
+    envVars:
+      - key: VITE_USE_MOCKS
+        value: "false"
+      - key: DATA_DIR
+        value: "/app/data"
+      - key: MODELS_DIR
+        value: "/app/models"
+      - key: ENABLE_OPTIONAL_MODELS
+        value: "false"
+    healthCheckPath: /api/health
